@@ -1,0 +1,221 @@
+import { useState } from 'react';
+import Logo from './Logo';
+import LanguageSwitcher from './LanguageSwitcher';
+import Notifications from './Notifications';
+import Settings from './Settings';
+import { useNavigate, useCurrentPage } from './Router';
+import { useAuth } from '../lib/AuthContext';
+import { useLanguage } from '../lib/i18n';
+import { LogOut, Menu, X, MessageSquare } from 'lucide-react';
+
+export default function Navigation() {
+  const navigate = useNavigate();
+  const currentPage = useCurrentPage();
+  const { user, signOut } = useAuth();
+  const { t } = useLanguage();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const navItems = [
+    { label: t.nav.home, path: '/' as const },
+    { label: t.nav.about, path: '/about' as const },
+    { label: t.nav.social, path: '/social' as const },
+    { label: t.nav.analyze, path: '/analyze' as const },
+    { label: t.nav.library, path: '/library' as const },
+  ];
+
+  const userNavItems = user ? [
+    { label: t.nav.dashboard, path: '/dashboard' as const },
+    { label: t.nav.contact, path: '/contact' as const },
+  ] : [
+    { label: t.nav.contact, path: '/contact' as const },
+  ];
+
+  const handleNavClick = (path: typeof navItems[number]['path'] | typeof userNavItems[number]['path']) => {
+    navigate(path);
+    setIsMobileMenuOpen(false);
+  };
+
+  return (
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-950/90 backdrop-blur-xl border-b border-pink-500/20 shadow-lg shadow-pink-500/5">
+      <div className="max-w-7xl mx-auto px-1 py-2">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center flex-shrink-0">
+            <Logo />
+          </div>
+
+          <div className="hidden lg:flex items-center gap-4 flex-shrink-0 whitespace-nowrap ml-12">
+            {navItems.map((item) => (
+              <button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className={`text-sm font-medium transition-all duration-300 hover:text-pink-400 relative group ${
+                  currentPage === item.path
+                    ? 'text-pink-400 drop-shadow-[0_0_8px_rgba(236,72,153,0.6)]'
+                    : 'text-slate-300'
+                }`}
+              >
+                {item.label}
+                <span className={`absolute bottom-0 left-0 w-0 h-0.5 bg-pink-400 transition-all duration-300 group-hover:w-full ${currentPage === item.path ? 'w-full' : ''}`}></span>
+              </button>
+            ))}
+
+            {userNavItems.map((item) => (
+              <button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className={`text-sm font-medium transition-all duration-300 hover:text-pink-400 relative group ${
+                  currentPage === item.path
+                    ? 'text-pink-400 drop-shadow-[0_0_8px_rgba(236,72,153,0.6)]'
+                    : 'text-slate-300'
+                }`}
+              >
+                {item.label}
+                <span className={`absolute bottom-0 left-0 w-0 h-0.5 bg-pink-400 transition-all duration-300 group-hover:w-full ${currentPage === item.path ? 'w-full' : ''}`}></span>
+              </button>
+            ))}
+
+            <button
+              onClick={() => navigate('/pricing')}
+              className={`px-4 py-2 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 text-white font-medium hover:from-pink-500 hover:to-purple-500 transition-all duration-300 hover:shadow-lg hover:shadow-pink-500/30 hover:scale-105 ${
+                currentPage === '/pricing' ? 'ring-2 ring-pink-400' : ''
+              }`}
+            >
+              {t.nav.buy}
+            </button>
+
+            <LanguageSwitcher />
+
+            {user ? (
+              <>
+                <Settings />
+                <Notifications />
+                <button
+                  onClick={() => navigate('/messages')}
+                  className="relative p-2 text-slate-400 hover:text-purple-400 transition-colors"
+                  title="Messages"
+                >
+                  <MessageSquare size={20} />
+                </button>
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="px-4 py-2 rounded-lg bg-slate-800/50 text-slate-300 hover:text-pink-400 transition-all duration-200"
+                >
+                  Profile
+                </button>
+                <button
+                  onClick={signOut}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-pink-600/20 to-purple-600/20 border border-pink-500/30 text-pink-300 hover:border-pink-400/50 hover:text-pink-200 transition-all duration-200"
+                >
+                  <LogOut size={16} />
+                  {t.nav.signOut}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => navigate('/signin')}
+                className={`px-6 py-2 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 text-white font-medium hover:from-pink-500 hover:to-purple-500 transition-all duration-200 hover:shadow-lg hover:shadow-pink-500/30 ${
+                  currentPage === '/signin' ? 'ring-2 ring-pink-400' : ''
+                }`}
+              >
+                {t.nav.signIn}
+              </button>
+            )}
+          </div>
+
+          <div className="flex lg:hidden items-center gap-3">
+            <LanguageSwitcher />
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="text-slate-300 hover:text-pink-400 transition-colors p-2"
+              aria-label="Toggle menu"
+            >
+              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
+        </div>
+
+        {isMobileMenuOpen && (
+          <div className="lg:hidden mt-4 pb-4 border-t border-pink-500/20 pt-4">
+            <div className="flex flex-col gap-3">
+              {navItems.map((item) => (
+                <button
+                  key={item.path}
+                  onClick={() => handleNavClick(item.path)}
+                  className={`text-left px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                    currentPage === item.path
+                      ? 'bg-pink-500/10 text-pink-400'
+                      : 'text-slate-300 hover:bg-slate-800/50 hover:text-pink-400'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+
+              {userNavItems.map((item) => (
+                <button
+                  key={item.path}
+                  onClick={() => handleNavClick(item.path)}
+                  className={`text-left px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                    currentPage === item.path
+                      ? 'bg-pink-500/10 text-pink-400'
+                      : 'text-slate-300 hover:bg-slate-800/50 hover:text-pink-400'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+
+              <button
+                onClick={() => {
+                  navigate('/pricing');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`text-left px-4 py-2 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 text-white font-medium hover:from-pink-500 hover:to-purple-500 transition-all duration-200 ${
+                  currentPage === '/pricing' ? 'ring-2 ring-pink-400' : ''
+                }`}
+              >
+                {t.nav.buy}
+              </button>
+
+              {user ? (
+                <>
+                  <button
+                    onClick={() => {
+                      navigate('/profile');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="text-left px-4 py-2 rounded-lg bg-slate-800/50 text-slate-300 hover:bg-slate-800/70 hover:text-pink-400 transition-all duration-200"
+                  >
+                    Profile
+                  </button>
+                  <button
+                    onClick={() => {
+                      signOut();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-pink-600/20 to-purple-600/20 border border-pink-500/30 text-pink-300 hover:border-pink-400/50 hover:text-pink-200 transition-all duration-200"
+                  >
+                    <LogOut size={16} />
+                    {t.nav.signOut}
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => {
+                    navigate('/signin');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`text-left px-4 py-2 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 text-white font-medium hover:from-pink-500 hover:to-purple-500 transition-all duration-200 ${
+                    currentPage === '/signin' ? 'ring-2 ring-pink-400' : ''
+                  }`}
+                >
+                  {t.nav.signIn}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </nav>
+  );
+}
