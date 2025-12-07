@@ -9,6 +9,7 @@ interface Translations {
     social: string;
     analyze: string;
     library: string;
+    generator: string;
     contact: string;
     dashboard: string;
     buy: string;
@@ -16,6 +17,29 @@ interface Translations {
     signIn: string;
     signOut: string;
     messages: string;
+  };
+  generator: {
+    title: string;
+    subtitle: string;
+    premiumOnly: string;
+    upgradeToPremium: string;
+    selectImage: string;
+    selectImageDesc: string;
+    noImages: string;
+    analyzeFirst: string;
+    promptLabel: string;
+    promptPlaceholder: string;
+    generateButton: string;
+    generating: string;
+    myGenerations: string;
+    generatedAt: string;
+    download: string;
+    delete: string;
+    makePublic: string;
+    makePrivate: string;
+    deleteConfirm: string;
+    empty: string;
+    startGenerating: string;
   };
     home: {
       title: string;
@@ -128,50 +152,32 @@ interface Translations {
       searchDreams: string;
       searchUsers: string;
       searchDreamsPlaceholder: string;
-      searchUsersPlaceholder: string;
       all: string;
       following: string;
+      searchDreamsPlaceholder: string;
+      findUsers: string;
+      searchUsersPlaceholder: string;
+      follow: string;
+      following2: string;
+      noUsers: string;
+      commentAdded: string;
+      commentFailed: string;
+      likeFailed: string;
+      viewProfile: string;
+      myProfile: string;
+      trialBadge: string;
+      standardBadge: string;
+      premiumBadge: string;
       visualAnalyses: string;
       textAnalyses: string;
-      recent: string;
-      popular: string;
-      trending: string;
-    pending: string;
-    noDreams: string;
-    shareFirst: string;
-    likes: string;
-    like: string;
-    comments: string;
-    comment: string;
-    viewAll: string;
-    noComments: string;
-    writeComment: string;
-    signInToComment: string;
-    signIn: string;
-    justNow: string;
-    minutesAgo: string;
-    hoursAgo: string;
-    daysAgo: string;
-    noUsersFound: string;
-    anonymous: string;
-    checkOutDream: string;
-    linkCopied: string;
-    deleteDream: string;
-    deleteConfirm: string;
-    dreamDeleted: string;
-    deleteFailed: string;
-    commentAdded: string;
-    commentFailed: string;
-    commentDeleted: string;
-    commentDeleteFailed: string;
-    deleteComment: string;
-    endOfFeed: string;
-    loadingMore: string;
-    previousImage: string;
-    nextImage: string;
-    close: string;
-    noPlanMessage: string;
-  };
+      generators: string;
+      generatorsPremiumOnly: string;
+      upgradeForGenerators: string;
+      noGenerations: string;
+      deleteConfirm: string;
+      dreamDeleted: string;
+      deleteFailed: string;
+    };
   profile: {
     title: string;
     manageAccount: string;
@@ -395,6 +401,7 @@ interface Translations {
       feature6: string;
       feature7: string;
       feature8: string;
+      feature9: string;
       cta: string;
     };
     ruyagezer: {
@@ -556,6 +563,7 @@ const translations: Record<Language, Translations> = {
       social: 'Social',
       analyze: 'Analyze',
       library: 'Library',
+      generator: 'Dream Workshop',
       contact: 'Contact',
       dashboard: 'Dashboard',
       buy: 'Buy',
@@ -563,6 +571,30 @@ const translations: Record<Language, Translations> = {
       signIn: 'Sign In',
       signOut: 'Sign Out',
       messages: 'Messages',
+    },
+    generator: {
+      title: 'Dream Workshop',
+      subtitle: 'Transform and design your dream visuals exactly as you imagine',
+      premiumOnly: 'Premium Feature',
+      upgradeToPremium: 'Upgrade to Premium',
+      lockMessage: 'Unlock the Dream Workshop and design your dream visuals exactly as you imagine. Exclusive to Premium members!',
+      selectImage: 'Select a Dream Image',
+      selectImageDesc: 'Choose an image from your library to transform',
+      noImages: 'No dream images found',
+      analyzeFirst: 'Analyze dreams with visual mode to get images',
+      promptLabel: 'Describe your transformation',
+      promptPlaceholder: 'Example: Make it more colorful, add mountains in the background, transform into cyberpunk style...',
+      generateButton: 'Generate',
+      generating: 'Generating...',
+      myGenerations: 'My Generations',
+      generatedAt: 'Generated',
+      download: 'Download',
+      delete: 'Delete',
+      makePublic: 'Make Public',
+      makePrivate: 'Make Private',
+      deleteConfirm: 'Are you sure you want to delete this generation?',
+      empty: 'No generations yet',
+      startGenerating: 'Start creating amazing images',
     },
     home: {
       title: 'Submirra',
@@ -680,6 +712,10 @@ const translations: Record<Language, Translations> = {
       following: 'Following',
       visualAnalyses: 'Visual Analyses',
       textAnalyses: 'Text Analyses',
+      generators: 'Dream Gallery',
+      generatorsPremiumOnly: 'Premium Feature - Upgrade to view',
+      upgradeForGenerators: 'Upgrade to Premium',
+      noGenerations: 'No creations yet',
       recent: 'Recent',
       popular: 'Popular',
       trending: 'Trending',
@@ -897,7 +933,7 @@ const translations: Record<Language, Translations> = {
         price: 'Free',
         description: 'Perfect for unlimited basic dream analysis',
         feature1: 'Unlimited basic dream analysis',
-        feature2: '30 dreams storage limit in library',
+        feature2: '10 dreams storage limit in library',
         feature3: 'Access to social features',
         cta: 'Get Free Plan',
       },
@@ -919,7 +955,7 @@ const translations: Record<Language, Translations> = {
         period: 'month',
         description: 'Great for regular dream journaling and insights',
         feature1: 'Access to social features',
-        feature2: '60 dreams storage limit in library',
+        feature2: '30 dreams storage limit in library',
         feature3: 'Advanced analysis unlocked',
         feature4: 'Unlimited detailed and advanced analysis',
         feature5: 'Visual analysis unlocked',
@@ -934,13 +970,14 @@ const translations: Record<Language, Translations> = {
         period: 'month',
         description: 'Unlock your subconscious completely with unlimited library and multiple visualizations',
         feature1: 'Access to social features',
-        feature2: '90 dreams storage limit in library',
+        feature2: '60 dreams storage limit in library',
         feature3: 'Advanced analysis unlocked',
         feature4: 'Unlimited, advanced and priority analysis',
         feature5: 'Visual analysis unlocked',
         feature6: '5 visual analyses per day',
         feature7: '3 images per analysis',
-        feature8: 'Exclusive dream themes (Horror, Sadness, Happiness, Adventure, Mystical, Sci-Fi)',
+        feature8: 'Dream Workshop unlocks',
+        feature9: 'Design your dream visuals as you imagine',
         cta: 'Go Premium',
       },
       whySubmirra: {
@@ -1093,15 +1130,40 @@ const translations: Record<Language, Translations> = {
       home: 'Ana Sayfa',
       about: 'Hakkında',
       social: 'Sosyal',
-      analyze: 'Analiz Et',
+      analyze: 'Analiz',
       library: 'Kütüphane',
+      generator: 'Rüya Atölyesi',
       contact: 'İletişim',
       dashboard: 'Kontrol Paneli',
       buy: 'Satın Al',
-      freeTrial: '7 Günlük Deneme',
+      freeTrial: '7 Günlük Ücretsiz Deneme',
       signIn: 'Giriş Yap',
       signOut: 'Çıkış Yap',
       messages: 'Mesajlar',
+    },
+    generator: {
+      title: 'Rüya Atölyesi',
+      subtitle: 'Rüya görsellerinizi hayal ettiğiniz gibi dönüştürün ve tasarlayın',
+      premiumOnly: 'Premium Özellik',
+      upgradeToPremium: 'Premium\'a Yükselt',
+      lockMessage: 'Rüya Atölyesi\'nin kilidini açın ve rüya görsellerinizi hayal ettiğiniz gibi tasarlayın. Premium üyelere özel!',
+      selectImage: 'Bir Rüya Görseli Seçin',
+      selectImageDesc: 'Kütüphanenizden dönüştürmek için bir görsel seçin',
+      noImages: 'Rüya görseli bulunamadı',
+      analyzeFirst: 'Görsel almak için görsel moduyla rüya analiz edin',
+      promptLabel: 'Dönüşümü tanımlayın',
+      promptPlaceholder: 'Örnek: Daha renkli yap, arka plana dağlar ekle, cyberpunk stile dönüştür...',
+      generateButton: 'Oluştur',
+      generating: 'Oluşturuluyor...',
+      myGenerations: 'Oluşturduğum Görseller',
+      generatedAt: 'Oluşturuldu',
+      download: 'İndir',
+      delete: 'Sil',
+      makePublic: 'Herkese Aç',
+      makePrivate: 'Gizle',
+      deleteConfirm: 'Bu görseli silmek istediğinizden emin misiniz?',
+      empty: 'Henüz görsel oluşturulmamış',
+      startGenerating: 'Harika görseller oluşturmaya başlayın',
     },
     home: {
       title: 'Submirra',
@@ -1219,7 +1281,11 @@ const translations: Record<Language, Translations> = {
       following: 'Takip Edilenler',
       visualAnalyses: 'Görselli Analizler',
       textAnalyses: 'Yazılı Analizler',
-      recent: 'Yeni',
+      generators: 'Hayal Galerisi',
+      generatorsPremiumOnly: 'Premium Özellik - Görüntülemek için yükselt',
+      upgradeForGenerators: 'Premium\'a Yükselt',
+      noGenerations: 'Henüz eser oluşturulmamış',
+      recent: 'En Yeni',
       popular: 'Popüler',
       trending: 'Trend',
       pending: 'Beklemede',
@@ -1440,7 +1506,7 @@ const translations: Record<Language, Translations> = {
         price: 'Ücretsiz',
         description: 'Sınırsız temel rüya analizi için mükemmel',
         feature1: 'Sınırsız bedava temel rüya analizi',
-        feature2: 'Kütüphanede 30 rüyaya kadar saklama limiti',
+        feature2: 'Kütüphanede 10 rüyaya kadar saklama limiti',
         feature3: 'Sosyal kısmına erişim hakkı',
         cta: 'Bedava Planı Al',
       },
@@ -1462,7 +1528,7 @@ const translations: Record<Language, Translations> = {
         period: 'ay',
         description: 'Düzenli rüya günlüğü ve içgörüler için harika',
         feature1: 'Sosyal kısmına erişim hakkı',
-        feature2: 'Kütüphanede 60 adet rüyaya kadar saklama limiti',
+        feature2: 'Kütüphanede 30 adet rüyaya kadar saklama limiti',
         feature3: 'Gelişmiş analiz kilidi açılır',
         feature4: 'Sınırsız, daha detaylı ve gelişmiş analiz',
         feature5: 'Görselli analiz kilidi açılır',
@@ -1477,13 +1543,14 @@ const translations: Record<Language, Translations> = {
         period: 'ay',
         description: 'Sınırsız kütüphane ve çoklu görselleştirmelerle bilinçaltınızın kilidini tamamen açın',
         feature1: 'Sosyal kısmına erişim hakkı',
-        feature2: 'Kütüphanede 90 adet rüyaya kadar saklama limiti',
+        feature2: 'Kütüphanede 60 adet rüyaya kadar saklama limiti',
         feature3: 'Gelişmiş analiz kilidi açılır',
         feature4: 'Sınırsız, gelişmiş ve öncelikli analiz hakkı',
         feature5: 'Görselli analiz kilidi açılır',
         feature6: 'Günde 5 defaya kadar görselli analiz hakkı',
         feature7: 'Analiz başına 3 görsel',
-        feature8: 'Özel rüya temaları (Korku, Hüzün, Mutluluk, Macera, Mistik, Bilim Kurgu)',
+        feature8: 'Rüya Atölyesi kilidi açılır',
+        feature9: 'Rüya görsellerinizi istediğiniz gibi tasarlayın',
         cta: 'Premium\'a Yükselt',
       },
       whySubmirra: {

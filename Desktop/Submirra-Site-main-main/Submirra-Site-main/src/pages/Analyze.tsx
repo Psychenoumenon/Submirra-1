@@ -18,7 +18,6 @@ export default function Analyze() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPublic, setIsPublic] = useState(false);
-  const [dreamTheme, setDreamTheme] = useState<string | null>(null);
   const [textAnalysisType, setTextAnalysisType] = useState<'basic' | 'advanced' | null>('basic');
   const [isVisualSelected, setIsVisualSelected] = useState(false);
   const [lastAnalysisType, setLastAnalysisType] = useState<'basic' | 'advanced' | 'basic_visual' | 'advanced_visual' | null>(null);
@@ -275,6 +274,37 @@ export default function Analyze() {
 
       // Skip all permission and limit checks if user is developer
       if (!isDev) {
+        // Check library storage limit before allowing new dreams
+        const { count: dreamCount, error: countError } = await supabase
+          .from('dreams')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+
+        if (countError) {
+          console.error('Error counting dreams:', countError);
+        } else {
+          // Define storage limits per plan
+          const storageLimits: Record<string, number> = {
+            'free': 10,
+            'trial': 10, // Trial uses same limit as free
+            'standard': 30,
+            'premium': 60,
+            'ruyagezer': 999999 // Unlimited for ruyagezer
+          };
+          
+          const currentLimit = storageLimits[planType || 'free'] || 10;
+          
+          if ((dreamCount || 0) >= currentLimit) {
+            const errorMsg = language === 'tr'
+              ? `Kütüphane limitiniz doldu (${currentLimit} rüya). Yeni rüya eklemek için eski rüyalarınızı silin veya daha yüksek bir plana geçin.`
+              : `Your library storage limit is full (${currentLimit} dreams). Delete old dreams or upgrade to a higher plan to add new ones.`;
+            setError(errorMsg);
+            showToast(errorMsg, 'error');
+            setIsSubmitting(false);
+            return;
+          }
+        }
+
         // Check if user can submit analysis (trial expired check)
         const { data: canSubmit, error: checkError } = await supabase.rpc('can_user_submit_analysis', {
           p_user_id: user.id
@@ -363,7 +393,6 @@ export default function Analyze() {
         status: 'pending',
         is_public: isPublic,
         analysis_type: analysisType, // Add analysis type
-        theme: dreamTheme, // Add dream theme (Premium feature)
       };
       
       // Add language-specific columns
@@ -782,61 +811,6 @@ export default function Analyze() {
                       <Video className="text-yellow-400/40" size={20} />
                     </div>
                   </button>
-                </div>
-              </div>
-
-              {/* Dream Theme Selection - Premium Feature (Visible to all, locked for non-premium) */}
-              <div className="mb-5 md:mb-6">
-                <label className="block text-white font-semibold mb-2 md:mb-3 text-sm md:text-base">
-                  <span>Rüya Teması</span>
-                </label>
-                <p className="text-slate-400 text-xs mb-3">Analizinize özel bir tema seçin (isteğe bağlı)</p>
-                <div className="grid grid-cols-3 gap-2 md:gap-3">
-                  {[
-                    { id: 'korku', emoji: '😱', label: 'Korku' },
-                    { id: 'hüzün', emoji: '😢', label: 'Hüzün' },
-                    { id: 'mutluluk', emoji: '😊', label: 'Mutluluk' },
-                    { id: 'macera', emoji: '🗺️', label: 'Macera' },
-                    { id: 'mistik', emoji: '🔮', label: 'Mistik' },
-                    { id: 'bilim_kurgu', emoji: '🚀', label: 'Bilim Kurgu' },
-                  ].map((theme) => (
-                    <button
-                      key={theme.id}
-                      type="button"
-                      onClick={() => {
-                        if (planType !== 'premium') {
-                          showToast('Rüya temaları sadece Premium kullanıcılar için kullanılabilir', 'info');
-                          navigate('/pricing');
-                          return;
-                        }
-                        setDreamTheme(dreamTheme === theme.id ? null : theme.id);
-                      }}
-                      disabled={planType !== 'premium'}
-                      className={`p-3 rounded-lg border-2 transition-all duration-300 text-center relative ${
-                        planType !== 'premium'
-                          ? 'border-slate-600/30 bg-slate-950/20 opacity-60 cursor-not-allowed'
-                          : dreamTheme === theme.id
-                          ? 'border-pink-500 bg-pink-500/10'
-                          : 'border-purple-500/30 bg-slate-950/30 hover:border-purple-500/50'
-                      }`}
-                    >
-                      {planType !== 'premium' && (
-                        <div className="absolute top-1 right-1">
-                          <span className="px-1.5 py-0.5 bg-slate-700 text-slate-300 text-[9px] font-semibold rounded">🔒</span>
-                        </div>
-                      )}
-                      <div className="text-2xl mb-1">{theme.emoji}</div>
-                      <span className={`text-xs font-medium ${
-                        planType !== 'premium'
-                          ? 'text-slate-500'
-                          : dreamTheme === theme.id 
-                          ? 'text-pink-400' 
-                          : 'text-slate-300'
-                      }`}>
-                        {theme.label}
-                      </span>
-                    </button>
-                  ))}
                 </div>
               </div>
 

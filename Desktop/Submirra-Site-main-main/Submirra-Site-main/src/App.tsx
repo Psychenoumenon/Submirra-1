@@ -10,6 +10,7 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 import Analyze from './pages/Analyze';
 import Library from './pages/Library';
+import Generator from './pages/Generator';
 import SignIn from './pages/Signln';
 import Pricing from './pages/Pricing';
 import Profile from './pages/Profile';
@@ -44,6 +45,8 @@ function AppContent() {
         return <Analyze />;
       case '/library':
         return <Library />;
+      case '/generator':
+        return <Generator />;
       case '/pricing':
         return <Pricing />;
       case '/profile':

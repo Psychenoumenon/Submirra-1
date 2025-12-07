@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Heart, MessageCircle, User, Loader2, Send, TrendingUp, Clock, Filter, Search, Users, Share2, Trash2, Sparkles, X, ChevronLeft, ChevronRight, Zap, BookOpen, Lock } from 'lucide-react';
+import { Heart, MessageCircle, User, Loader2, Send, TrendingUp, Clock, Filter, Search, Users, Share2, Trash2, Sparkles, X, ChevronLeft, ChevronRight, Zap, BookOpen, Lock, Wand2, Download } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from '../components/Router';
 import { useLanguage } from '../lib/i18n';
@@ -48,9 +48,27 @@ interface Comment {
   };
 }
 
+interface Generation {
+  id: string;
+  user_id: string;
+  source_image_url: string;
+  generated_image_url: string;
+  prompt: string;
+  is_public: boolean;
+  created_at: string;
+  profiles: {
+    full_name: string;
+    avatar_url: string | null;
+    username?: string;
+  };
+  subscriptions?: {
+    plan_type?: 'trial' | 'standard' | 'premium' | null;
+  } | null;
+}
+
 type SortOption = 'recent' | 'popular' | 'trending';
 type FilterOption = 'all' | 'following';
-type AnalysisTypeFilter = 'visual' | 'text';
+type AnalysisTypeFilter = 'visual' | 'text' | 'generators';
 
 export default function Social() {
   const { user } = useAuth();
@@ -58,7 +76,9 @@ export default function Social() {
   const { t, language } = useLanguage();
   const { showToast } = useToast();
   const [dreams, setDreams] = useState<PublicDream[]>([]);
+  const [generations, setGenerations] = useState<Generation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingGenerations, setLoadingGenerations] = useState(false);
   const [selectedDream, setSelectedDream] = useState<PublicDream | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -78,7 +98,7 @@ export default function Social() {
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
-  const [planType, setPlanType] = useState<'free' | 'trial' | 'standard' | 'premium' | null | undefined>(undefined);
+  const [planType, setPlanType] = useState<'free' | 'trial' | 'standard' | 'premium' | 'ruyagezer' | null | undefined>(undefined);
   const [checkingPlan, setCheckingPlan] = useState(true);
 
   // Helper function to get original images in order (without reordering)
@@ -582,6 +602,52 @@ export default function Social() {
     return () => clearTimeout(timeoutId);
   }, [userSearchQuery, showUserSearch]);
 
+  const loadGenerations = async () => {
+    try {
+      setLoadingGenerations(true);
+      
+      // Load public generations
+      const { data: generationsData, error: genError } = await supabase
+        .from('dream_generations')
+        .select('*')
+        .eq('is_public', true)
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (genError) throw genError;
+
+      // Get unique user IDs
+      const userIds = [...new Set(generationsData?.map(g => g.user_id) || [])];
+
+      // Load profiles
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url, username')
+        .in('id', userIds);
+
+      // Load subscriptions
+      const { data: subscriptionsData } = await supabase
+        .from('subscriptions')
+        .select('user_id, plan_type')
+        .in('user_id', userIds);
+
+      // Map profiles and subscriptions to generations
+      const generationsWithProfiles = (generationsData || []).map(gen => ({
+        ...gen,
+        profiles: profilesData?.find(p => p.id === gen.user_id) || null,
+        subscriptions: subscriptionsData?.find(s => s.user_id === gen.user_id) || null,
+      }));
+
+      setGenerations(generationsWithProfiles);
+    } catch (error) {
+      console.error('Error loading generations:', error);
+      showToast('Failed to load generations', 'error');
+    } finally {
+      setLoadingGenerations(false);
+    }
+  };
+
   const handleLike = async (dreamId: string) => {
     if (!user) {
       navigate('/signin');
@@ -1037,6 +1103,30 @@ export default function Social() {
             >
               {t.social.textAnalyses}
             </button>
+            <button
+              onClick={() => {
+                if (planType !== 'premium' && planType !== 'ruyagezer') {
+                  // Premium değilse göster ama içerik yükleme
+                  showToast(t.social.generatorsPremiumOnly, 'error');
+                  return;
+                }
+                setAnalysisTypeFilter('generators');
+                loadGenerations();
+              }}
+              className={`flex-1 px-4 py-2 rounded text-sm font-medium transition-all relative group ${
+                analysisTypeFilter === 'generators'
+                  ? 'bg-gradient-to-r from-pink-600 to-yellow-600 text-white'
+                  : 'text-slate-400 hover:text-slate-300'
+              }`}
+            >
+              <span className="flex items-center justify-center gap-1.5">
+                {planType !== 'premium' && planType !== 'ruyagezer' && (
+                  <Lock size={14} className="text-yellow-400" />
+                )}
+                <Sparkles size={14} className={planType === 'premium' || planType === 'ruyagezer' ? 'text-yellow-400' : ''} />
+                {t.social.generators}
+              </span>
+            </button>
           </div>
 
           {/* Filter and Sort */}
@@ -1123,7 +1213,112 @@ export default function Social() {
           </div>
         </div>
 
-        {dreams.length === 0 ? (
+        {/* Show Generators Content when generators tab is active */}
+        {analysisTypeFilter === 'generators' ? (
+          <>
+            {/* Premium Lock Screen for non-premium users */}
+            {planType !== 'premium' && planType !== 'ruyagezer' ? (
+              <div className="text-center py-20">
+                <div className="relative inline-block mb-8">
+                  <Sparkles className="mx-auto text-yellow-400 animate-pulse" size={64} />
+                  <Lock className="absolute -top-2 -right-2 text-pink-400" size={32} />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-4">{t.social.generatorsPremiumOnly}</h3>
+                <p className="text-slate-400 mb-8 max-w-md mx-auto">
+                  Upgrade to Premium to view and create AI-generated dream art
+                </p>
+                <button
+                  onClick={() => navigate('/pricing')}
+                  className="px-8 py-4 rounded-xl bg-gradient-to-r from-pink-600 to-yellow-600 text-white font-semibold hover:from-pink-500 hover:to-yellow-500 transition-all duration-300 hover:shadow-lg hover:shadow-pink-500/30 hover:scale-105"
+                >
+                  {t.social.upgradeForGenerators}
+                </button>
+              </div>
+            ) : loadingGenerations ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="animate-spin text-purple-400" size={48} />
+              </div>
+            ) : generations.length === 0 ? (
+              <div className="text-center py-20">
+                <Wand2 className="mx-auto mb-4 text-slate-600" size={64} />
+                <p className="text-slate-400 text-lg mb-6">{t.social.noGenerations}</p>
+                <button
+                  onClick={() => navigate('/generator')}
+                  className="px-6 py-3 rounded-lg bg-gradient-to-r from-pink-600 to-yellow-600 text-white font-semibold hover:from-pink-500 hover:to-yellow-500 transition-all duration-300"
+                >
+                  Create Your First Generation
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                {generations.map((gen) => (
+                  <div
+                    key={gen.id}
+                    className="group bg-slate-900/50 backdrop-blur-sm border border-yellow-500/20 rounded-2xl overflow-hidden hover:border-yellow-500/40 transition-all duration-300"
+                  >
+                    {/* Generated Image */}
+                    <div className="relative aspect-square overflow-hidden bg-slate-950">
+                      <img
+                        src={gen.generated_image_url}
+                        alt="AI Generated"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        onClick={() => setLightboxImage(gen.generated_image_url)}
+                      />
+                      <div className="absolute top-3 left-3">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-pink-600/90 to-yellow-600/90 backdrop-blur-sm rounded-full">
+                          <Sparkles size={14} className="text-white" />
+                          <span className="text-white text-xs font-semibold">AI Generated</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Generation Info */}
+                    <div className="p-4">
+                      {/* User Profile */}
+                      <div className="flex items-center gap-3 mb-3">
+                        <div
+                          className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 flex items-center justify-center overflow-hidden cursor-pointer hover:border-pink-500/50 transition-all"
+                          onClick={() => navigate(`/profile/${gen.user_id}`)}
+                        >
+                          {gen.profiles?.avatar_url ? (
+                            <img
+                              src={gen.profiles.avatar_url}
+                              alt={gen.profiles.full_name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <User className="text-pink-400" size={20} />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className="font-semibold text-white truncate cursor-pointer hover:text-pink-400 transition-colors"
+                            onClick={() => navigate(`/profile/${gen.user_id}`)}
+                          >
+                            {gen.profiles?.full_name || 'Anonymous'}
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            {new Date(gen.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        {gen.subscriptions?.plan_type === 'premium' && (
+                          <div className="px-2 py-1 bg-gradient-to-r from-pink-600/20 to-purple-600/20 border border-pink-500/30 rounded text-xs text-pink-400 font-semibold">
+                            Premium
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Prompt */}
+                      <p className="text-slate-300 text-sm line-clamp-3">
+                        {gen.prompt}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : dreams.length === 0 ? (
           <div className="text-center py-20">
             <User className="mx-auto mb-4 text-slate-600" size={64} />
             <p className="text-slate-400 text-lg mb-6">{t.social.noDreams}</p>

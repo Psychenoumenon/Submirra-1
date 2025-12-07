@@ -1,0 +1,865 @@
+{
+  "name": "🌙 Submirra - Unified + Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dream-webhook",
+        "options": {}
+      },
+      "id": "ff487f95-054e-493c-b725-bdf8399fd018",
+      "name": "Dream Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-16, 416],
+      "webhookId": "dream-webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generator-webhook",
+        "options": {}
+      },
+      "id": "gen-webhook-001",
+      "name": "Generator Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-16, 1200],
+      "webhookId": "generator-webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "user_id",
+              "name": "user_id",
+              "type": "string",
+              "value": "={{ $json.body.user_id }}"
+            },
+            {
+              "id": "source_image_url",
+              "name": "source_image_url",
+              "type": "string",
+              "value": "={{ $json.body.source_image_url }}"
+            },
+            {
+              "id": "prompt",
+              "name": "prompt",
+              "type": "string",
+              "value": "={{ $json.body.prompt }}"
+            },
+            {
+              "id": "generation_id",
+              "name": "generation_id",
+              "type": "string",
+              "value": "={{ $json.body.generation_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "gen-set-vars-001",
+      "name": "Set Generator Variables",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [224, 1200]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "subscriptions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "user_id",
+              "keyValue": "={{ $json.user_id }}"
+            }
+          ]
+        }
+      },
+      "id": "gen-check-premium-001",
+      "name": "Check Premium Status",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [448, 1200],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "PFA80EiSfODUskBN",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.plan_type }}",
+              "rightValue": "premium",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "id": "premium-check-1"
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "gen-if-premium-001",
+      "name": "Is Premium?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [672, 1200]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert image transformation prompt engineer. Your job is to take a user's transformation request and create a detailed, high-quality image prompt for Leonardo AI.\n\nRULES:\n- Create a detailed visual prompt based on the user's request\n- Keep the essence of the original dream image\n- Add the requested transformations/modifications\n- Output ONLY the prompt, no explanations\n- Maximum 500 characters\n- Focus on visual details, lighting, atmosphere, style\n- Make it suitable for Leonardo AI image generation\n\nUSER'S TRANSFORMATION REQUEST:\n{{ $('Set Generator Variables').item.json.prompt }}\n\nCreate a detailed image prompt that transforms the source image according to the user's request. Output only the prompt.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [896, 1100],
+      "id": "gen-prompt-enhance-001",
+      "name": "Enhance Transformation Prompt"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [896, 1280],
+      "id": "gen-openai-model-001",
+      "name": "OpenAI Model (Generator)",
+      "credentials": {
+        "openAiApi": {
+          "id": "zE2LErXZKI9mtjQr",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "enhanced_prompt",
+              "name": "enhanced_prompt",
+              "type": "string",
+              "value": "={{ $json.output.replace(/\"/g, '').replace(/\\\\/g, '').replace(/\\n/g, ' ').trim().substring(0, 500) }}"
+            },
+            {
+              "id": "user_id",
+              "name": "user_id",
+              "type": "string",
+              "value": "={{ $('Set Generator Variables').item.json.user_id }}"
+            },
+            {
+              "id": "source_image_url",
+              "name": "source_image_url",
+              "type": "string",
+              "value": "={{ $('Set Generator Variables').item.json.source_image_url }}"
+            },
+            {
+              "id": "original_prompt",
+              "name": "original_prompt",
+              "type": "string",
+              "value": "={{ $('Set Generator Variables').item.json.prompt }}"
+            },
+            {
+              "id": "generation_id",
+              "name": "generation_id",
+              "type": "string",
+              "value": "={{ $('Set Generator Variables').item.json.generation_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "gen-set-enhanced-001",
+      "name": "Set Enhanced Prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1120, 1100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://cloud.leonardo.ai/api/rest/v1/generations",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"prompt\": \"{{ $json.enhanced_prompt }}\",\n  \"modelId\": \"6b645e3a-d64f-4341-a6d8-7a3690fbf042\",\n  \"width\": 1024,\n  \"height\": 1024,\n  \"num_images\": 1,\n  \"sd_version\": \"PHOENIX\",\n  \"alchemy\": true,\n  \"presetStyle\": \"CINEMATIC\",\n  \"guidance_scale\": 7,\n  \"public\": false,\n  \"init_image_id\": null,\n  \"init_strength\": 0.3,\n  \"controlnets\": [],\n  \"imagePrompts\": [\n    {\n      \"imageUrl\": \"{{ $json.source_image_url }}\",\n      \"weight\": 0.7\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "gen-leonardo-generate-001",
+      "name": "Leonardo AI - Image to Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1344, 1100],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "hdrtPCY00775XQau",
+          "name": "Leonardo AI Api Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 25
+      },
+      "id": "gen-wait-001",
+      "name": "Wait for Generator",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1568, 1100],
+      "webhookId": "wait-generator"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "leonardo_generation_id",
+              "name": "leonardo_generation_id",
+              "type": "string",
+              "value": "={{ $('Leonardo AI - Image to Image').item.json.sdGenerationJob.generationId }}"
+            },
+            {
+              "id": "user_id",
+              "name": "user_id",
+              "type": "string",
+              "value": "={{ $('Set Generator Variables').item.json.user_id }}"
+            },
+            {
+              "id": "source_image_url",
+              "name": "source_image_url",
+              "type": "string",
+              "value": "={{ $('Set Generator Variables').item.json.source_image_url }}"
+            },
+            {
+              "id": "original_prompt",
+              "name": "original_prompt",
+              "type": "string",
+              "value": "={{ $('Set Generator Variables').item.json.prompt }}"
+            },
+            {
+              "id": "generation_id",
+              "name": "generation_id",
+              "type": "string",
+              "value": "={{ $('Set Generator Variables').item.json.generation_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "gen-set-leo-id-001",
+      "name": "Set Leonardo Gen ID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1792, 1100]
+    },
+    {
+      "parameters": {
+        "url": "=https://cloud.leonardo.ai/api/rest/v1/generations/{{ $json.leonardo_generation_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "gen-leonardo-get-001",
+      "name": "Leonardo AI - Get Generated Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2016, 1100],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "hdrtPCY00775XQau",
+          "name": "Leonardo AI Api Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "generated_image_url",
+              "name": "generated_image_url",
+              "type": "string",
+              "value": "={{ $json.generations_by_pk.generated_images[0].url }}"
+            },
+            {
+              "id": "user_id",
+              "name": "user_id",
+              "type": "string",
+              "value": "={{ $('Set Generator Variables').item.json.user_id }}"
+            },
+            {
+              "id": "source_image_url",
+              "name": "source_image_url",
+              "type": "string",
+              "value": "={{ $('Set Generator Variables').item.json.source_image_url }}"
+            },
+            {
+              "id": "prompt",
+              "name": "prompt",
+              "type": "string",
+              "value": "={{ $('Set Generator Variables').item.json.prompt }}"
+            },
+            {
+              "id": "generation_id",
+              "name": "generation_id",
+              "type": "string",
+              "value": "={{ $('Set Generator Variables').item.json.generation_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "gen-set-final-001",
+      "name": "Set Final Generated Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2240, 1100]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "dream_generations",
+        "filterType": "string",
+        "filterString": "=id=eq.{{ $json.generation_id }}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "generated_image_url",
+              "fieldValue": "={{ $json.generated_image_url }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "completed"
+            }
+          ]
+        }
+      },
+      "id": "gen-update-supabase-001",
+      "name": "Update Generation in Supabase",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [2464, 1100],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "PFA80EiSfODUskBN",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "dream_generations",
+        "filterType": "string",
+        "filterString": "=id=eq.{{ $('Set Generator Variables').item.json.generation_id }}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "failed"
+            },
+            {
+              "fieldId": "error_message",
+              "fieldValue": "Premium subscription required"
+            }
+          ]
+        }
+      },
+      "id": "gen-not-premium-001",
+      "name": "Not Premium - Fail",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [896, 1350],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "PFA80EiSfODUskBN",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "user_id",
+              "name": "user_id",
+              "type": "string",
+              "value": "={{ $json.body.user_id }}"
+            },
+            {
+              "id": "dream_text",
+              "name": "dream_text",
+              "type": "string",
+              "value": "={{ $json.body.dream_text }}"
+            },
+            {
+              "id": "analysis_type",
+              "name": "analysis_type",
+              "type": "string",
+              "value": "={{ $json.body.analysis_type || 'basic' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "282587b3-c89c-4f48-9a48-f3361b784f58",
+      "name": "Set Variables",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [224, 416]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "subscriptions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "user_id",
+              "keyValue": "={{ $json.user_id }}"
+            }
+          ]
+        }
+      },
+      "id": "289d9215-c03c-47aa-be73-d790cc1d8287",
+      "name": "Get Subscription",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [432, 416],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "PFA80EiSfODUskBN",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "user_id",
+              "name": "user_id",
+              "type": "string",
+              "value": "={{ $('Set Variables').item.json.user_id }}"
+            },
+            {
+              "id": "dream_text",
+              "name": "dream_text",
+              "type": "string",
+              "value": "={{ $('Set Variables').item.json.dream_text }}"
+            },
+            {
+              "id": "analysis_type",
+              "name": "analysis_type",
+              "type": "string",
+              "value": "={{ $('Set Variables').item.json.analysis_type }}"
+            },
+            {
+              "id": "plan_type",
+              "name": "plan_type",
+              "type": "string",
+              "value": "={{ $json.plan_type || 'free' }}"
+            },
+            {
+              "id": "num_images",
+              "name": "num_images",
+              "type": "number",
+              "value": "={{ $json.visualizations_per_analysis || 1 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "35ff300f-bb76-47bb-bd4e-a30a81d7ec13",
+      "name": "Set Plan Info",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [656, 416]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "dreams",
+        "filterType": "string",
+        "filterString": "=user_id=eq.{{ $json.user_id }}&status=in.(pending,processing)&order=created_at.desc&limit=1",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "processing"
+            }
+          ]
+        }
+      },
+      "id": "983ee9fb-3c7a-4f69-83c0-632c24a06ca5",
+      "name": "Update Status: Processing",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [880, 416],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "PFA80EiSfODUskBN",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.analysis_type }}",
+                    "rightValue": "basic",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "1ab1ade8-56fa-44b3-a54c-dde132f09d60"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "basic"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.analysis_type }}",
+                    "rightValue": "basic_visual",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "4112f9eb-4b34-4cd7-9696-d7096e5f82b1"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "basic_visual"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.analysis_type }}",
+                    "rightValue": "advanced",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "84529801-da42-42b9-83b5-183adb1bdf7e"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "advanced"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.analysis_type }}",
+                    "rightValue": "advanced_visual",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "72276bca-8671-4569-9624-59f14c018a2e"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "advanced_visual"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "72c67e2a-3d4a-48a8-b1f3-b5c1017a91ef",
+      "name": "Switch Analysis Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [1104, 416]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Dream Webhook": {
+      "main": [
+        [
+          {
+            "node": "Set Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generator Webhook": {
+      "main": [
+        [
+          {
+            "node": "Set Generator Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Generator Variables": {
+      "main": [
+        [
+          {
+            "node": "Check Premium Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Premium Status": {
+      "main": [
+        [
+          {
+            "node": "Is Premium?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Premium?": {
+      "main": [
+        [
+          {
+            "node": "Enhance Transformation Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Not Premium - Fail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enhance Transformation Prompt": {
+      "main": [
+        [
+          {
+            "node": "Set Enhanced Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Model (Generator)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Enhance Transformation Prompt",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Enhanced Prompt": {
+      "main": [
+        [
+          {
+            "node": "Leonardo AI - Image to Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leonardo AI - Image to Image": {
+      "main": [
+        [
+          {
+            "node": "Wait for Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Generator": {
+      "main": [
+        [
+          {
+            "node": "Set Leonardo Gen ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Leonardo Gen ID": {
+      "main": [
+        [
+          {
+            "node": "Leonardo AI - Get Generated Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leonardo AI - Get Generated Image": {
+      "main": [
+        [
+          {
+            "node": "Set Final Generated Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Final Generated Data": {
+      "main": [
+        [
+          {
+            "node": "Update Generation in Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Variables": {
+      "main": [
+        [
+          {
+            "node": "Get Subscription",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Subscription": {
+      "main": [
+        [
+          {
+            "node": "Set Plan Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Plan Info": {
+      "main": [
+        [
+          {
+            "node": "Update Status: Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status: Processing": {
+      "main": [
+        [
+          {
+            "node": "Switch Analysis Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

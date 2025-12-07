@@ -1,9 +1,9 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
-type Page = '/' | '/about' | '/contact' | '/analyze' | '/library' | '/pricing' | '/profile' | '/signin' | '/signup' | '/dashboard' | '/social' | '/activate-trial' | '/messages' | '/terms' | '/privacy' | '/feedback' | '/settings';
+type Page = '/' | '/about' | '/contact' | '/analyze' | '/library' | '/generator' | '/pricing' | '/profile' | '/signin' | '/signup' | '/dashboard' | '/social' | '/activate-trial' | '/messages' | '/terms' | '/privacy' | '/feedback' | '/settings';
 
 // Valid routes that should be handled
-const VALID_ROUTES: Page[] = ['/', '/about', '/contact', '/analyze', '/library', '/pricing', '/profile', '/signin', '/signup', '/dashboard', '/social', '/activate-trial', '/messages', '/terms', '/privacy', '/feedback', '/settings'];
+const VALID_ROUTES: Page[] = ['/', '/about', '/contact', '/analyze', '/library', '/generator', '/pricing', '/profile', '/signin', '/signup', '/dashboard', '/social', '/activate-trial', '/messages', '/terms', '/privacy', '/feedback', '/settings'];
 
 interface RouterContextType {
   currentPage: Page;

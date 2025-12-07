@@ -1820,7 +1820,7 @@ export default function Profile() {
                 {publicDreams.map((dream) => (
                   <div
                     key={dream.id}
-                    onClick={() => navigate(`/social`)}
+                    onClick={() => navigate(`/social?dream=${dream.id}`)}
                     className="group relative aspect-square bg-slate-900/50 border border-purple-500/20 rounded-xl overflow-hidden cursor-pointer hover:border-purple-500/40 transition-all"
                   >
                     {(dream.analysis_type === 'basic' || dream.analysis_type === 'advanced') ? (

@@ -118,6 +118,8 @@ export default function Notifications() {
   useEffect(() => {
     if (!user) return;
 
+    console.log('🔔 Setting up notifications real-time subscription for user:', user.id);
+
     // CRITICAL: Set up real-time subscription FIRST, then load notifications
     // This ensures we don't miss any notifications that arrive during page load
     const notificationsChannel = supabase
@@ -131,14 +133,28 @@ export default function Notifications() {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          console.log('New notification received instantly:', payload);
+          console.log('🔔 NEW NOTIFICATION RECEIVED INSTANTLY:', payload);
+          console.log('🔔 Notification ID:', payload.new?.id);
+          console.log('🔔 Notification Type:', payload.new?.type);
           // Add notification instantly without reloading all
           if (payload.new?.id) {
+            console.log('✅ Adding notification to list instantly');
             addNewNotification(payload.new.id);
+          } else {
+            console.error('❌ Notification ID missing, cannot add');
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('🔔 Notifications channel subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Real-time notifications ACTIVE and listening');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Notifications subscription ERROR');
+        } else if (status === 'TIMED_OUT') {
+          console.error('⏱️ Notifications subscription TIMED OUT');
+        }
+      });
 
     // Load notifications immediately after setting up subscription
     // Subscription will catch any notifications that arrive during/after load

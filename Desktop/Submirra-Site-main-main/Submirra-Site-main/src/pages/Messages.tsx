@@ -569,6 +569,17 @@ export default function Messages() {
     }
   };
 
+  // CRITICAL: Load messages when conversation is selected
+  useEffect(() => {
+    if (selectedConversation && user) {
+      console.log('🔄 Selected conversation changed, loading messages for:', selectedConversation);
+      loadMessages(selectedConversation);
+    } else {
+      // Clear messages when no conversation is selected
+      setMessages([]);
+    }
+  }, [selectedConversation, user]);
+
   // Separate effect for loading user profile when conversation is selected but user not in list
   useEffect(() => {
     if (selectedConversation && !loading) {
