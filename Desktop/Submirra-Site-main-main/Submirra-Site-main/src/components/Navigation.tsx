@@ -5,7 +5,7 @@ import Notifications from './Notifications';
 import { useNavigate, useCurrentPage } from './Router';
 import { useAuth } from '../lib/AuthContext';
 import { useLanguage } from '../lib/i18n';
-import { Menu, X, MessageSquare, User, Sparkles, Lock, LogOut } from 'lucide-react';
+import { Menu, X, MessageSquare, User, Sparkles, Lock, LogOut, Settings } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export default function Navigation() {
@@ -232,6 +232,13 @@ export default function Navigation() {
                   )}
                 </button>
                 <button
+                  onClick={() => navigate('/settings')}
+                  className="p-2 text-slate-400 hover:text-purple-400 transition-colors"
+                  title={t.nav.settings || 'Settings'}
+                >
+                  <Settings size={20} />
+                </button>
+                <button
                   onClick={() => navigate('/profile')}
                   className="flex items-center gap-2 p-1 rounded-full bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200 group"
                   title={userProfile?.full_name || 'Profile'}
@@ -347,11 +354,22 @@ export default function Navigation() {
                 <>
                   <button
                     onClick={() => {
-                      navigate('/profile');
+                      navigate('/settings');
                       setIsMobileMenuOpen(false);
                     }}
                     className="flex items-center gap-3 px-4 py-2 rounded-lg bg-slate-800/50 text-slate-300 hover:bg-slate-800/70 hover:text-pink-400 transition-all duration-200 animate-fade-in"
                     style={{ animationDelay: `${(navItems.length + userNavItems.length + 1) * 0.05}s` }}
+                  >
+                    <Settings size={16} />
+                    {t.nav.settings || 'Settings'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      navigate('/profile');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="flex items-center gap-3 px-4 py-2 rounded-lg bg-slate-800/50 text-slate-300 hover:bg-slate-800/70 hover:text-pink-400 transition-all duration-200 animate-fade-in"
+                    style={{ animationDelay: `${(navItems.length + userNavItems.length + 2) * 0.05}s` }}
                   >
                     <div className="w-6 h-6 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 flex items-center justify-center overflow-hidden">
                       {userProfile?.avatar_url ? (

@@ -17,12 +17,14 @@ interface Translations {
     signIn: string;
     signOut: string;
     messages: string;
+    settings: string;
   };
   generator: {
     title: string;
     subtitle: string;
     premiumOnly: string;
     upgradeToPremium: string;
+    lockMessage: string;
     selectImage: string;
     selectImageDesc: string;
     noImages: string;
@@ -571,6 +573,7 @@ const translations: Record<Language, Translations> = {
       signIn: 'Sign In',
       signOut: 'Sign Out',
       messages: 'Messages',
+      settings: 'Settings',
     },
     generator: {
       title: 'Dream Workshop',
@@ -1140,6 +1143,7 @@ const translations: Record<Language, Translations> = {
       signIn: 'Giriş Yap',
       signOut: 'Çıkış Yap',
       messages: 'Mesajlar',
+      settings: 'Ayarlar',
     },
     generator: {
       title: 'Rüya Atölyesi',

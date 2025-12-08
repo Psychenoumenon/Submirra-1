@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, Image as ImageIcon, Wand2, Loader2, Download, Trash2, Lock, Eye, EyeOff } from 'lucide-react';
+import { Sparkles, Image as ImageIcon, Wand2, Loader2, Download, Trash2, Lock, Eye, EyeOff, X, ZoomIn } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from '../components/Router';
 import { useLanguage } from '../lib/i18n';
@@ -22,6 +22,7 @@ interface Generation {
   generated_image_url: string;
   prompt: string;
   is_public: boolean;
+  status?: string;
   created_at: string;
 }
 
@@ -38,6 +39,8 @@ export default function Generator() {
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [loadingImages, setLoadingImages] = useState<{[key: string]: boolean}>({});
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
+  const [modalImage, setModalImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -84,9 +87,11 @@ export default function Generator() {
 
         if (gensError) throw gensError;
         setGenerations(gens || []);
+        setIsFirstLoad(false);
       } catch (error) {
         console.error('Error loading data:', error);
         showToast('Error loading data', 'error');
+        setIsFirstLoad(false);
       } finally {
         setLoading(false);
       }
@@ -94,6 +99,40 @@ export default function Generator() {
 
     checkPremiumAndLoadData();
   }, [user, authLoading, navigate]);
+
+  // Subscribe to realtime updates for dream_generations
+  useEffect(() => {
+    if (!user || !isPremium) return;
+
+    const channel = supabase
+      .channel('dream-generations-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'dream_generations',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('Generation updated:', payload);
+          const updatedGen = payload.new as Generation;
+          setGenerations(prev => 
+            prev.map(g => g.id === updatedGen.id ? updatedGen : g)
+          );
+          
+          // Show toast if generation completed
+          if (updatedGen.status === 'completed' && updatedGen.generated_image_url) {
+            showToast('Image generation completed!', 'success');
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, isPremium, showToast]);
 
   const handleGenerate = async () => {
     if (!selectedImage || !prompt.trim()) {
@@ -117,23 +156,50 @@ export default function Generator() {
         .select()
         .single();
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('❌ Insert error:', insertError);
+        throw new Error(`Database error: ${insertError.message}`);
+      }
+      
+      if (!genRecord) {
+        throw new Error('Failed to create generation record');
+      }
+
+      console.log('✅ Generation record created:', genRecord.id);
 
       // 2. Call n8n webhook to start generation
-      const webhookUrl = import.meta.env.VITE_N8N_GENERATOR_WEBHOOK_URL || 'https://your-n8n-instance.com/webhook/generator-webhook';
+      const webhookUrl = import.meta.env.VITE_N8N_GENERATOR_WEBHOOK_URL;
       
-      await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_id: user!.id,
-          source_image_url: selectedImage,
-          prompt: prompt.trim(),
-          generation_id: genRecord.id,
-        }),
-      });
+      if (webhookUrl) {
+        console.log('🔄 Calling webhook:', webhookUrl);
+        try {
+          const webhookResponse = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              user_id: user!.id,
+              source_image_url: selectedImage,
+              prompt: prompt.trim(),
+              generation_id: genRecord.id,
+            }),
+          });
+          
+          if (!webhookResponse.ok) {
+            console.warn(`⚠️ Webhook request failed: ${webhookResponse.status} ${webhookResponse.statusText}`);
+          } else {
+            console.log('✅ Webhook called successfully');
+          }
+        } catch (webhookError) {
+          console.warn('⚠️ Webhook call failed:', webhookError);
+          // Don't throw, just log the error and continue
+        }
+      } else {
+        console.warn('⚠️ VITE_N8N_GENERATOR_WEBHOOK_URL is not configured.');
+        console.log('ℹ️ To enable automatic image generation, add this to your .env file:');
+        console.log('ℹ️ VITE_N8N_GENERATOR_WEBHOOK_URL=your_webhook_url');
+      }
 
       // 3. Poll for completion (check every 5 seconds for up to 60 seconds)
       let attempts = 0;
@@ -165,23 +231,29 @@ export default function Generator() {
         return null;
       };
 
-      const completedGen = await pollForCompletion();
+      // Add the record immediately to show it in the list
+      setGenerations([genRecord, ...generations]);
+      setPrompt('');
+      setSelectedImage(null);
       
-      if (completedGen) {
-        setGenerations([completedGen, ...generations]);
-        setPrompt('');
-        setSelectedImage(null);
-        showToast('Image generated successfully!', 'success');
-      } else {
-        // Generation is still processing, add the pending record
-        setGenerations([genRecord, ...generations]);
-        setPrompt('');
-        setSelectedImage(null);
-        showToast('Generation started! It will appear when ready.', 'success');
+      showToast('Generation started! Processing in background...', 'success');
+      
+      // If webhook is configured, try to poll for completion in background
+      if (webhookUrl) {
+        // Poll in background without blocking
+        pollForCompletion().then(completedGen => {
+          if (completedGen && completedGen.status === 'completed') {
+            setGenerations(prev => prev.map(g => g.id === completedGen.id ? completedGen : g));
+            showToast('Image generation completed!', 'success');
+          }
+        }).catch(err => {
+          console.error('Polling error:', err);
+        });
       }
     } catch (error) {
       console.error('Error generating image:', error);
-      showToast('Error generating image', 'error');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      showToast(`Generation failed: ${errorMessage}`, 'error');
     } finally {
       setIsGenerating(false);
     }
@@ -225,13 +297,57 @@ export default function Generator() {
     }
   };
 
-  const downloadImage = (imageUrl: string) => {
-    const link = document.createElement('a');
-    link.href = imageUrl;
-    link.download = `submirra-generation-${Date.now()}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const downloadImage = async (imageUrl: string) => {
+    try {
+      showToast('Downloading image...', 'info');
+      
+      // Fetch the image as a blob to avoid CORS issues
+      const response = await fetch(imageUrl, {
+        mode: 'cors',
+        credentials: 'omit',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.style.display = 'none';
+      link.href = url;
+      link.download = `submirra-generation-${Date.now()}.png`;
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }, 100);
+      
+      showToast('Image downloaded successfully!', 'success');
+    } catch (error) {
+      console.error('Download error:', error);
+      // Fallback: try direct download without fetch
+      try {
+        const link = document.createElement('a');
+        link.href = imageUrl;
+        link.download = `submirra-generation-${Date.now()}.png`;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast('Download started...', 'success');
+      } catch (fallbackError) {
+        console.error('Fallback download error:', fallbackError);
+        showToast('Opening image in new tab...', 'info');
+        window.open(imageUrl, '_blank');
+      }
+    }
   };
 
   if (authLoading || loading) {
@@ -330,12 +446,12 @@ export default function Generator() {
                 <p className="text-slate-500 text-sm">{t.generator.analyzeFirst}</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-2 pb-4 scrollbar-hide content-start">
+              <div className="grid grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-2 pb-2 scrollbar-hide auto-rows-max items-start">
                 {allImages.map((img, index) => (
                   <button
                     key={`${img.dreamId}-${index}`}
                     onClick={() => setSelectedImage(img.url)}
-                    className={`relative group rounded-xl overflow-hidden transition-all duration-300 aspect-square ${
+                    className={`relative group rounded-xl overflow-hidden transition-all duration-300 aspect-square w-full ${
                       selectedImage === img.url
                         ? 'ring-4 ring-pink-500 scale-95'
                         : 'hover:scale-105'
@@ -437,7 +553,17 @@ export default function Generator() {
             {t.generator.myGenerations}
           </h2>
 
-          {generations.length === 0 ? (
+          {isFirstLoad ? (
+            <div className="text-center py-12">
+              <div className="relative w-24 h-24 mx-auto mb-6">
+                <div className="absolute inset-0 rounded-full border-4 border-purple-500/20"></div>
+                <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-purple-500 animate-spin"></div>
+                <div className="absolute inset-2 rounded-full border-4 border-transparent border-t-pink-500 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1s' }}></div>
+              </div>
+              <p className="text-slate-400 mb-2">Loading generations...</p>
+              <p className="text-slate-500 text-sm">Please wait</p>
+            </div>
+          ) : generations.length === 0 ? (
             <div className="text-center py-12">
               <Wand2 className="mx-auto mb-4 text-slate-600" size={48} />
               <p className="text-slate-400 mb-2">{t.generator.empty}</p>
@@ -451,28 +577,52 @@ export default function Generator() {
                   className="group bg-slate-950/30 rounded-xl overflow-hidden border border-purple-500/10 hover:border-purple-500/30 transition-all duration-300"
                 >
                   <div className="relative">
-                    {loadingImages[gen.id] && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm z-10">
-                        <Loader2 className="animate-spin text-pink-400" size={32} />
+                    {(!gen.generated_image_url || gen.status === 'processing') ? (
+                      <div className="w-full aspect-square flex flex-col items-center justify-center bg-slate-900/50">
+                        <div className="relative w-20 h-20 mb-4">
+                          <div className="absolute inset-0 rounded-full border-4 border-purple-500/20"></div>
+                          <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-purple-500 animate-spin"></div>
+                          <div className="absolute inset-2 rounded-full border-4 border-transparent border-t-pink-500 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1s' }}></div>
+                        </div>
+                        <p className="text-slate-400 text-sm">Processing...</p>
+                        <p className="text-slate-500 text-xs mt-1">Please wait</p>
+                      </div>
+                    ) : (
+                      <>
+                        {loadingImages[gen.id] && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm z-10">
+                            <Loader2 className="animate-spin text-pink-400" size={32} />
+                          </div>
+                        )}
+                        <div 
+                          className="relative cursor-pointer group/image"
+                          onClick={() => setModalImage(gen.generated_image_url)}
+                        >
+                          <img
+                            src={gen.generated_image_url}
+                            alt="Generated"
+                            className="w-full aspect-square object-cover transition-transform group-hover/image:scale-105"
+                            onLoadStart={() => setLoadingImages(prev => ({ ...prev, [gen.id]: true }))}
+                            onLoad={() => setLoadingImages(prev => ({ ...prev, [gen.id]: false }))}
+                            onError={() => setLoadingImages(prev => ({ ...prev, [gen.id]: false }))}
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover/image:bg-black/40 transition-colors flex items-center justify-center">
+                            <ZoomIn className="text-white opacity-0 group-hover/image:opacity-100 transition-opacity" size={32} />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    {gen.generated_image_url && gen.status !== 'processing' && (
+                      <div className="absolute top-2 right-2 flex gap-2">
+                        <button
+                          onClick={() => togglePublic(gen.id, gen.is_public)}
+                          className="p-2 bg-slate-900/80 backdrop-blur-sm rounded-lg hover:bg-slate-800 transition-colors"
+                          title={gen.is_public ? t.generator.makePrivate : t.generator.makePublic}
+                        >
+                          {gen.is_public ? <Eye size={16} className="text-green-400" /> : <EyeOff size={16} className="text-slate-400" />}
+                        </button>
                       </div>
                     )}
-                    <img
-                      src={gen.generated_image_url}
-                      alt="Generated"
-                      className="w-full aspect-square object-cover"
-                      onLoadStart={() => setLoadingImages(prev => ({ ...prev, [gen.id]: true }))}
-                      onLoad={() => setLoadingImages(prev => ({ ...prev, [gen.id]: false }))}
-                      onError={() => setLoadingImages(prev => ({ ...prev, [gen.id]: false }))}
-                    />
-                    <div className="absolute top-2 right-2 flex gap-2">
-                      <button
-                        onClick={() => togglePublic(gen.id, gen.is_public)}
-                        className="p-2 bg-slate-900/80 backdrop-blur-sm rounded-lg hover:bg-slate-800 transition-colors"
-                        title={gen.is_public ? t.generator.makePrivate : t.generator.makePublic}
-                      >
-                        {gen.is_public ? <Eye size={16} className="text-green-400" /> : <EyeOff size={16} className="text-slate-400" />}
-                      </button>
-                    </div>
                   </div>
                   <div className="p-4">
                     <p className="text-slate-300 text-sm mb-3 line-clamp-2">{gen.prompt}</p>
@@ -482,7 +632,8 @@ export default function Generator() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => downloadImage(gen.generated_image_url)}
-                        className="flex-1 px-3 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
+                        disabled={!gen.generated_image_url || gen.status === 'processing'}
+                        className="flex-1 px-3 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Download size={16} />
                         {t.generator.download}
@@ -501,6 +652,28 @@ export default function Generator() {
           )}
         </div>
       </div>
+
+      {/* Image Modal - Gallery Style */}
+      {modalImage && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm p-4"
+          onClick={() => setModalImage(null)}
+        >
+          <button
+            onClick={() => setModalImage(null)}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10 bg-black/50 rounded-full p-2"
+            aria-label="Close modal"
+          >
+            <X className="text-white" size={24} />
+          </button>
+          <img
+            src={modalImage}
+            alt="Full size"
+            className="max-w-full max-h-[90vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }

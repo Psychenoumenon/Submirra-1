@@ -64,6 +64,9 @@ interface Generation {
   subscriptions?: {
     plan_type?: 'trial' | 'standard' | 'premium' | null;
   } | null;
+  likes_count: number;
+  comments_count: number;
+  is_liked: boolean;
 }
 
 type SortOption = 'recent' | 'popular' | 'trending';
@@ -80,10 +83,15 @@ export default function Social() {
   const [loading, setLoading] = useState(true);
   const [loadingGenerations, setLoadingGenerations] = useState(false);
   const [selectedDream, setSelectedDream] = useState<PublicDream | null>(null);
+  const [selectedGeneration, setSelectedGeneration] = useState<Generation | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
+  const [generationComments, setGenerationComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
+  const [newGenerationComment, setNewGenerationComment] = useState('');
   const [loadingComments, setLoadingComments] = useState(false);
+  const [loadingGenerationComments, setLoadingGenerationComments] = useState(false);
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [submittingGenerationComment, setSubmittingGenerationComment] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const [filterBy, setFilterBy] = useState<FilterOption>('all');
   const [analysisTypeFilter, setAnalysisTypeFilter] = useState<AnalysisTypeFilter>('visual');
@@ -310,15 +318,7 @@ export default function Social() {
           created_at,
           user_id,
           status,
-          is_public,
-          profiles:user_id (
-            full_name,
-            avatar_url,
-            username
-          ),
-          subscriptions:user_id (
-            plan_type
-          )
+          is_public
         `)
         .eq('is_public', true)
         .in('status', ['completed', 'pending', 'processing'])
@@ -373,12 +373,7 @@ export default function Social() {
               created_at,
               user_id,
               status,
-              is_public,
-              profiles:user_id (
-                full_name,
-                avatar_url,
-                username
-              )
+              is_public
             `)
             .in('status', ['completed', 'pending', 'processing'])
             .order('created_at', { ascending: false })
@@ -423,6 +418,35 @@ export default function Social() {
         } else {
           console.error('Error loading dreams:', dreamsError);
           throw dreamsError;
+        }
+      }
+
+      // Get unique user IDs and fetch profiles + subscriptions
+      const userIds = [...new Set((dreamsData || []).map(d => d.user_id))];
+      console.log('🔍 User IDs to fetch:', userIds.length, userIds);
+      let profilesData: any[] = [];
+      let subscriptionsData: any[] = [];
+
+      if (userIds.length > 0) {
+        const [profilesResult, subscriptionsResult] = await Promise.allSettled([
+          supabase
+            .from('profiles')
+            .select('id, full_name, avatar_url, username')
+            .in('id', userIds),
+          supabase
+            .from('subscriptions')
+            .select('user_id, plan_type')
+            .in('user_id', userIds)
+        ]);
+
+        if (profilesResult.status === 'fulfilled' && profilesResult.value.data) {
+          profilesData = profilesResult.value.data;
+          console.log('✅ Loaded profiles:', profilesData.length, profilesData);
+        } else {
+          console.error('❌ Failed to load profiles:', profilesResult);
+        }
+        if (subscriptionsResult.status === 'fulfilled' && subscriptionsResult.value.data) {
+          subscriptionsData = subscriptionsResult.value.data;
         }
       }
 
@@ -474,23 +498,17 @@ export default function Social() {
         });
 
         const dreamsWithStats = (dreamsData || []).map(dream => {
-          // Handle subscriptions - can be array or single object
-          let subscription = null;
-          if (dream.subscriptions) {
-            if (Array.isArray(dream.subscriptions)) {
-              subscription = dream.subscriptions.length > 0 ? dream.subscriptions[0] : null;
-            } else {
-              subscription = dream.subscriptions;
-            }
-          }
+          // Find profile and subscription for this dream's user
+          const profile = profilesData.find(p => p.id === dream.user_id);
+          const subscription = subscriptionsData.find(s => s.user_id === dream.user_id);
           
           return {
             ...dream,
             likes_count: likesMap.get(dream.id) || 0,
             comments_count: commentsMap.get(dream.id) || 0,
             is_liked: userLikesSet.has(dream.id),
-            profiles: dream.profiles || { full_name: 'Anonymous', avatar_url: null, username: null },
-            subscriptions: subscription
+            profiles: profile || { full_name: 'Anonymous', avatar_url: null, username: null },
+            subscriptions: subscription || null
           };
         });
 
@@ -632,11 +650,53 @@ export default function Social() {
         .select('user_id, plan_type')
         .in('user_id', userIds);
 
-      // Map profiles and subscriptions to generations
+      // Get generation IDs
+      const genIds = generationsData?.map(g => g.id) || [];
+
+      // Load likes count for each generation
+      const { data: likesData } = await supabase
+        .from('generation_likes')
+        .select('generation_id')
+        .in('generation_id', genIds);
+
+      // Load comments count for each generation
+      const { data: commentsData } = await supabase
+        .from('generation_comments')
+        .select('generation_id')
+        .in('generation_id', genIds);
+
+      // Check if current user liked these generations
+      let userLikesData: any[] = [];
+      if (user) {
+        const { data } = await supabase
+          .from('generation_likes')
+          .select('generation_id')
+          .in('generation_id', genIds)
+          .eq('user_id', user.id);
+        userLikesData = data || [];
+      }
+
+      // Count likes and comments per generation
+      const likesCounts = (likesData || []).reduce((acc: any, like: any) => {
+        acc[like.generation_id] = (acc[like.generation_id] || 0) + 1;
+        return acc;
+      }, {});
+
+      const commentsCounts = (commentsData || []).reduce((acc: any, comment: any) => {
+        acc[comment.generation_id] = (acc[comment.generation_id] || 0) + 1;
+        return acc;
+      }, {});
+
+      const userLikedSet = new Set(userLikesData.map((like: any) => like.generation_id));
+
+      // Map profiles, subscriptions, likes, and comments to generations
       const generationsWithProfiles = (generationsData || []).map(gen => ({
         ...gen,
         profiles: profilesData?.find(p => p.id === gen.user_id) || null,
         subscriptions: subscriptionsData?.find(s => s.user_id === gen.user_id) || null,
+        likes_count: likesCounts[gen.id] || 0,
+        comments_count: commentsCounts[gen.id] || 0,
+        is_liked: userLikedSet.has(gen.id),
       }));
 
       setGenerations(generationsWithProfiles);
@@ -692,6 +752,54 @@ export default function Social() {
       }
     } catch (error) {
       console.error('Error toggling like:', error);
+      showToast('Failed to update like', 'error');
+    }
+  };
+
+  const handleGenerationLike = async (generationId: string) => {
+    if (!user) {
+      navigate('/signin');
+      return;
+    }
+
+    try {
+      const generation = generations.find(g => g.id === generationId);
+      if (!generation) return;
+
+      if (generation.is_liked) {
+        // Unlike
+        const { error } = await supabase
+          .from('generation_likes')
+          .delete()
+          .eq('generation_id', generationId)
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+
+        setGenerations(prev => prev.map(g =>
+          g.id === generationId
+            ? { ...g, is_liked: false, likes_count: g.likes_count - 1 }
+            : g
+        ));
+      } else {
+        // Like
+        const { error } = await supabase
+          .from('generation_likes')
+          .insert({
+            generation_id: generationId,
+            user_id: user.id
+          });
+
+        if (error) throw error;
+
+        setGenerations(prev => prev.map(g =>
+          g.id === generationId
+            ? { ...g, is_liked: true, likes_count: g.likes_count + 1 }
+            : g
+        ));
+      }
+    } catch (error) {
+      console.error('Error toggling generation like:', error);
       showToast('Failed to update like', 'error');
     }
   };
@@ -913,6 +1021,130 @@ export default function Social() {
     setComments([]);
     setNewComment('');
     loadComments(dream.id);
+  };
+
+  const openGenerationModal = async (generation: Generation) => {
+    setSelectedGeneration(generation);
+    setGenerationComments([]);
+    setNewGenerationComment('');
+    
+    // Load comments for this generation
+    try {
+      setLoadingGenerationComments(true);
+      const { data, error } = await supabase
+        .from('generation_comments')
+        .select('id, comment_text, created_at, user_id')
+        .eq('generation_id', generation.id)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      // Get user profiles for these comments
+      if (data && data.length > 0) {
+        const userIds = [...new Set(data.map(c => c.user_id))];
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url')
+          .in('id', userIds);
+
+        // Map profiles to comments
+        const commentsWithProfiles = data.map(comment => ({
+          ...comment,
+          profiles: profilesData?.find(p => p.id === comment.user_id) || null
+        }));
+
+        setGenerationComments(commentsWithProfiles as any);
+      } else {
+        setGenerationComments([]);
+      }
+    } catch (error) {
+      console.error('Error loading generation comments:', error);
+    } finally {
+      setLoadingGenerationComments(false);
+    }
+  };
+
+  const submitGenerationComment = async () => {
+    if (!user) {
+      navigate('/signin');
+      return;
+    }
+
+    if (!newGenerationComment.trim() || !selectedGeneration) return;
+
+    try {
+      setSubmittingGenerationComment(true);
+      const { data, error } = await supabase
+        .from('generation_comments')
+        .insert({
+          generation_id: selectedGeneration.id,
+          user_id: user.id,
+          comment_text: newGenerationComment.trim()
+        })
+        .select('id, comment_text, created_at, user_id')
+        .single();
+
+      if (error) throw error;
+
+      // Get user profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url')
+        .eq('id', user.id)
+        .single();
+
+      const commentWithProfile = {
+        ...data,
+        profiles: profileData || null
+      };
+
+      setGenerationComments([...generationComments, commentWithProfile as any]);
+      setNewGenerationComment('');
+      
+      // Update comment count
+      setGenerations(prev => prev.map(g =>
+        g.id === selectedGeneration.id
+          ? { ...g, comments_count: g.comments_count + 1 }
+          : g
+      ));
+
+      showToast('Comment posted!', 'success');
+    } catch (error) {
+      console.error('Error posting comment:', error);
+      showToast('Failed to post comment', 'error');
+    } finally {
+      setSubmittingGenerationComment(false);
+    }
+  };
+
+  const deleteGenerationComment = async (commentId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('generation_comments')
+        .delete()
+        .eq('id', commentId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setGenerationComments(prev => prev.filter(c => c.id !== commentId));
+      
+      // Update comment count
+      if (selectedGeneration) {
+        setGenerations(prev => prev.map(g =>
+          g.id === selectedGeneration.id
+            ? { ...g, comments_count: Math.max(0, g.comments_count - 1) }
+            : g
+        ));
+      }
+
+      showToast('Comment deleted', 'success');
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      showToast('Failed to delete comment', 'error');
+    }
   };
 
   if (loading || checkingPlan) {
@@ -1257,17 +1489,25 @@ export default function Social() {
                     className="group bg-slate-900/50 backdrop-blur-sm border border-yellow-500/20 rounded-2xl overflow-hidden hover:border-yellow-500/40 transition-all duration-300"
                   >
                     {/* Generated Image */}
-                    <div className="relative aspect-square overflow-hidden bg-slate-950">
+                    <div className="relative aspect-square overflow-hidden bg-slate-950 cursor-pointer">
                       <img
                         src={gen.generated_image_url}
-                        alt="AI Generated"
+                        alt="Generated dream"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         onClick={() => setLightboxImage(gen.generated_image_url)}
                       />
-                      <div className="absolute top-3 left-3">
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-pink-600/90 to-yellow-600/90 backdrop-blur-sm rounded-full">
-                          <Sparkles size={14} className="text-white" />
-                          <span className="text-white text-xs font-semibold">AI Generated</span>
+                      
+                      {/* Overlay on hover */}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
+                        <div className="flex items-center gap-6 text-white pointer-events-none">
+                          <div className="flex items-center gap-2">
+                            <Heart size={24} className={gen.is_liked ? 'fill-current text-pink-400' : ''} />
+                            <span className="font-semibold">{gen.likes_count}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <MessageCircle size={24} />
+                            <span className="font-semibold">{gen.comments_count}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1301,17 +1541,37 @@ export default function Social() {
                             {new Date(gen.created_at).toLocaleDateString()}
                           </p>
                         </div>
-                        {gen.subscriptions?.plan_type === 'premium' && (
-                          <div className="px-2 py-1 bg-gradient-to-r from-pink-600/20 to-purple-600/20 border border-pink-500/30 rounded text-xs text-pink-400 font-semibold">
-                            Premium
-                          </div>
-                        )}
                       </div>
 
-                      {/* Prompt */}
-                      <p className="text-slate-300 text-sm line-clamp-3">
-                        {gen.prompt}
-                      </p>
+                      {/* Actions Bar */}
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+                        <div className="flex items-center gap-4">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleGenerationLike(gen.id);
+                            }}
+                            className={`flex items-center gap-1.5 transition-all hover:scale-110 ${
+                              gen.is_liked
+                                ? 'text-pink-400'
+                                : 'text-slate-400 hover:text-pink-400'
+                            }`}
+                          >
+                            <Heart size={20} className={gen.is_liked ? 'fill-current' : ''} />
+                            <span className="text-sm font-medium">{gen.likes_count}</span>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openGenerationModal(gen);
+                            }}
+                            className="flex items-center gap-1.5 text-slate-400 hover:text-purple-400 transition-all hover:scale-110"
+                          >
+                            <MessageCircle size={20} />
+                            <span className="text-sm font-medium">{gen.comments_count}</span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1500,16 +1760,6 @@ export default function Social() {
                           >
                             {dream.profiles.full_name || dream.profiles.username || t.social.anonymous}
                           </button>
-                          {dream.subscriptions?.plan_type && dream.subscriptions.plan_type !== 'trial' && (
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 ${
-                              dream.subscriptions.plan_type === 'premium'
-                                ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/40 text-yellow-300'
-                                : 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/40 text-blue-300'
-                            }`}>
-                              <Zap size={8} />
-                              {dream.subscriptions.plan_type === 'premium' ? 'Premium' : 'Standard'}
-                            </span>
-                          )}
                         </div>
                         <p className="text-white/70 text-xs">{formatDate(dream.created_at)}</p>
                       </div>
@@ -1629,18 +1879,6 @@ export default function Social() {
                             >
                               {dream.profiles.full_name || dream.profiles.username || t.social.anonymous}
                             </button>
-                            {dream.subscriptions?.plan_type && dream.subscriptions.plan_type !== 'trial' && (
-                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 ${
-                                dream.subscriptions.plan_type === 'premium'
-                                  ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/40 text-yellow-300'
-                                  : dream.subscriptions.plan_type === 'free'
-                                  ? 'bg-gradient-to-r from-slate-500/20 to-slate-600/20 border border-slate-500/40 text-slate-300'
-                                  : 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/40 text-blue-300'
-                              }`}>
-                                <Zap size={8} />
-                                {dream.subscriptions.plan_type === 'premium' ? 'Premium' : dream.subscriptions.plan_type === 'free' ? 'Free Plan' : 'Standard'}
-                              </span>
-                            )}
                             <span className="text-white/50 text-xs">{formatDate(dream.created_at)}</span>
                           </div>
                           <div className="mb-3">
@@ -1685,18 +1923,6 @@ export default function Social() {
                             >
                               {dream.profiles.full_name || dream.profiles.username || t.social.anonymous}
                             </button>
-                            {dream.subscriptions?.plan_type && dream.subscriptions.plan_type !== 'trial' && (
-                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 ${
-                                dream.subscriptions.plan_type === 'premium'
-                                  ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/40 text-yellow-300'
-                                  : dream.subscriptions.plan_type === 'free'
-                                  ? 'bg-gradient-to-r from-slate-500/20 to-slate-600/20 border border-slate-500/40 text-slate-300'
-                                  : 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/40 text-blue-300'
-                              }`}>
-                                <Zap size={8} />
-                                {dream.subscriptions.plan_type === 'premium' ? 'Premium' : dream.subscriptions.plan_type === 'free' ? 'Free Plan' : 'Standard'}
-                              </span>
-                            )}
                           </div>
                           <span className="text-white/80 text-sm line-clamp-2">
                             {getDreamText(dream, language)}
@@ -2002,6 +2228,120 @@ export default function Social() {
             className="max-w-full max-h-[90vh] object-contain rounded-lg"
             onClick={(e) => e.stopPropagation()}
           />
+        </div>
+      )}
+
+      {/* Generation Comments Modal */}
+      {selectedGeneration && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-purple-500/30 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-purple-500/20">
+              <h3 className="text-xl font-bold text-white">Comments</h3>
+              <button
+                onClick={() => setSelectedGeneration(null)}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Comments List */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {loadingGenerationComments ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="animate-spin text-purple-400" size={32} />
+                </div>
+              ) : generationComments.length === 0 ? (
+                <div className="text-center py-12">
+                  <MessageCircle className="mx-auto mb-4 text-slate-600" size={48} />
+                  <p className="text-slate-400">No comments yet</p>
+                  <p className="text-slate-500 text-sm mt-2">Be the first to comment!</p>
+                </div>
+              ) : (
+                generationComments.map((comment) => (
+                  <div key={comment.id} className="flex gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {comment.profiles?.avatar_url ? (
+                        <img
+                          src={comment.profiles.avatar_url}
+                          alt={comment.profiles.full_name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <User className="text-pink-400" size={20} />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-semibold text-white text-sm">
+                          {comment.profiles?.full_name || 'Anonymous'}
+                        </p>
+                        <p className="text-slate-500 text-xs">
+                          {new Date(comment.created_at).toLocaleDateString()}
+                        </p>
+                        {user && comment.user_id === user.id && (
+                          <button
+                            onClick={() => deleteGenerationComment(comment.id)}
+                            className="ml-auto text-slate-400 hover:text-red-400 transition-colors"
+                            title="Delete comment"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-slate-300 text-sm">{comment.comment_text}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Comment Input */}
+            <div className="p-6 border-t border-purple-500/20">
+              {user ? (
+                <div className="flex gap-3">
+                  <textarea
+                    value={newGenerationComment}
+                    onChange={(e) => setNewGenerationComment(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (newGenerationComment.trim()) {
+                          submitGenerationComment();
+                        }
+                      }
+                    }}
+                    placeholder="Write a comment..."
+                    className="flex-1 px-4 py-3 bg-slate-950/50 border border-purple-500/30 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60 resize-none"
+                    rows={2}
+                    disabled={submittingGenerationComment}
+                  />
+                  <button
+                    onClick={submitGenerationComment}
+                    disabled={!newGenerationComment.trim() || submittingGenerationComment}
+                    className="px-6 py-3 bg-gradient-to-r from-pink-600 to-purple-600 text-white font-semibold rounded-xl hover:from-pink-500 hover:to-purple-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {submittingGenerationComment ? (
+                      <Loader2 className="animate-spin" size={20} />
+                    ) : (
+                      <Send size={20} />
+                    )}
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-slate-400 mb-4">Sign in to comment</p>
+                  <button
+                    onClick={() => navigate('/signin')}
+                    className="px-6 py-2 bg-gradient-to-r from-pink-600 to-purple-600 text-white font-semibold rounded-xl hover:from-pink-500 hover:to-purple-500 transition-all duration-300"
+                  >
+                    Sign In
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
