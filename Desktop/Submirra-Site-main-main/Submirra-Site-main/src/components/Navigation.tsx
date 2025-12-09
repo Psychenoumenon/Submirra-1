@@ -15,7 +15,6 @@ export default function Navigation() {
   const { t } = useLanguage();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<{avatar_url: string | null, full_name: string} | null>(null);
-  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const [isPremium, setIsPremium] = useState(false);
 
   const navItems = [
@@ -39,64 +38,6 @@ export default function Navigation() {
     setIsMobileMenuOpen(false);
   };
 
-  // Load unread message count
-  useEffect(() => {
-    if (!user) return;
-
-    const loadUnreadCount = async () => {
-      try {
-        const { count, error } = await supabase
-          .from('messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('receiver_id', user.id)
-          .is('read_at', null);
-
-        if (error) {
-          console.error('Error loading unread count:', error);
-          return;
-        }
-
-        setUnreadMessageCount(count || 0);
-      } catch (error) {
-        console.error('Error in loadUnreadCount:', error);
-      }
-    };
-
-    loadUnreadCount();
-
-    // Real-time subscription for new messages
-    const channel = supabase
-      .channel('unread-messages')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `receiver_id=eq.${user.id}`,
-        },
-        () => {
-          loadUnreadCount();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'messages',
-          filter: `receiver_id=eq.${user.id}`,
-        },
-        () => {
-          loadUnreadCount();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
 
   useEffect(() => {
     if (user) {
@@ -349,11 +290,6 @@ export default function Navigation() {
                   title={t.nav.messages}
                 >
                   <MessageSquare size={20} />
-                  {unreadMessageCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-                      {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
-                    </span>
-                  )}
                 </button>
                 <button
                   onClick={() => navigate('/settings')}
