@@ -238,8 +238,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.clear();
       sessionStorage.clear();
       
-      // Force reload to home page (this ensures all state is cleared)
-      window.location.replace('/');
+      // Force reload to login page (this ensures all state is cleared)
+      window.location.replace('/signin');
     } catch (error) {
       console.error('Sign out exception:', error);
       
@@ -247,7 +247,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       localStorage.clear();
       sessionStorage.clear();
-      window.location.replace('/');
+      window.location.replace('/signin');
     }
   };
 

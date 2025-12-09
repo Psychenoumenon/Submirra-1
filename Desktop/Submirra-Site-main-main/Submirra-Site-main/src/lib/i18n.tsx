@@ -404,6 +404,7 @@ interface Translations {
       feature7: string;
       feature8: string;
       feature9: string;
+      feature10: string;
       cta: string;
     };
     ruyagezer: {
@@ -418,8 +419,11 @@ interface Translations {
       feature5: string;
       feature6: string;
       feature7: string;
+      feature8: string;
       feature9: string;
       feature10: string;
+      feature11: string;
+      feature12: string;
     };
       whySubmirra: {
         title: string;
@@ -954,7 +958,7 @@ const translations: Record<Language, Translations> = {
       },
       standard: {
         title: 'Standard',
-        price: '$10',
+        price: '$9',
         period: 'month',
         description: 'Great for regular dream journaling and insights',
         feature1: 'Access to social features',
@@ -969,7 +973,7 @@ const translations: Record<Language, Translations> = {
       premium: {
         badge: 'Most Popular',
         title: 'Premium',
-        price: '$20',
+        price: '$21',
         period: 'month',
         description: 'Unlock your subconscious completely with unlimited library and multiple visualizations',
         feature1: 'Access to social features',
@@ -981,6 +985,7 @@ const translations: Record<Language, Translations> = {
         feature7: '3 images per analysis',
         feature8: 'Dream Workshop unlocks',
         feature9: 'Design your dream visuals as you imagine',
+        feature10: 'Dream gallery unlocks in social',
         cta: 'Go Premium',
       },
       whySubmirra: {
@@ -999,8 +1004,11 @@ const translations: Record<Language, Translations> = {
         feature5: 'Visual analysis unlocked',
         feature6: '7 visual analyses per day',
         feature7: '3 images per analysis',
-        feature9: 'Video analysis unlocked',
-        feature10: '1 video analysis per day',
+        feature8: 'Dream Workshop unlocks',
+        feature9: 'Design your dream visuals as you imagine',
+        feature10: 'Video analysis unlocked',
+        feature11: '1 video analysis per day',
+        feature12: 'Dream gallery unlocks in social',
       },
     },
     trial: {
@@ -1528,7 +1536,7 @@ const translations: Record<Language, Translations> = {
       },
       standard: {
         title: 'Standart',
-        price: '₺400',
+        price: '₺300',
         period: 'ay',
         description: 'Düzenli rüya günlüğü ve içgörüler için harika',
         feature1: 'Sosyal kısmına erişim hakkı',
@@ -1543,7 +1551,7 @@ const translations: Record<Language, Translations> = {
       premium: {
         badge: 'En Popüler',
         title: 'Premium',
-        price: '₺800',
+        price: '₺700',
         period: 'ay',
         description: 'Sınırsız kütüphane ve çoklu görselleştirmelerle bilinçaltınızın kilidini tamamen açın',
         feature1: 'Sosyal kısmına erişim hakkı',
@@ -1555,6 +1563,7 @@ const translations: Record<Language, Translations> = {
         feature7: 'Analiz başına 3 görsel',
         feature8: 'Rüya Atölyesi kilidi açılır',
         feature9: 'Rüya görsellerinizi istediğiniz gibi tasarlayın',
+        feature10: 'Sosyalde rüya galerisi kilidi açılır',
         cta: 'Premium\'a Yükselt',
       },
       whySubmirra: {
@@ -1572,9 +1581,12 @@ const translations: Record<Language, Translations> = {
         feature4: 'Sınırsız, gelişmiş ve öncelikli analiz hakkı',
         feature5: 'Analiz sayfasında görselli analiz kilidi açılır',
         feature6: 'Günde 7 defaya kadar görselli analiz hakkı',
-        feature7: 'Analiz sayfasında görselli analiz seçilirse, analiz başına 3 görsel',
-        feature9: 'Videolu analiz kilidi açılır',
-        feature10: 'Günde 1 defaya kadar videolu analiz hakkı',
+        feature7: 'Analiz başına 3 görsel',
+        feature8: 'Rüya Atölyesi kilidi açılır',
+        feature9: 'Rüya görsellerinizi istediğiniz gibi tasarlayın',
+        feature10: 'Videolu analiz kilidi açılır',
+        feature11: 'Günde 1 defaya kadar videolu analiz hakkı',
+        feature12: 'Sosyalde rüya galerisi kilidi açılır',
       },
     },
     trial: {

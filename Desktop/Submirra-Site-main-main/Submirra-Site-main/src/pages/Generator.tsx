@@ -408,107 +408,135 @@ export default function Generator() {
   });
 
   return (
-    <div className="min-h-screen relative pt-24 pb-16 px-4">
+    <div className="min-h-screen relative pt-24 pb-16 px-4 overflow-hidden">
+      {/* Enhanced Background Effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-40 right-10 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-40 left-10 w-96 h-96 bg-pink-500/5 rounded-full blur-3xl"></div>
+        <div className="absolute top-40 right-10 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-40 left-10 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-yellow-500/5 via-purple-500/5 to-pink-500/5 rounded-full blur-3xl"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-500/5 to-transparent"></div>
       </div>
 
       <div className="relative max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border border-yellow-500/30 rounded-full mb-6">
-            <Sparkles className="text-yellow-400" size={20} />
-            <span className="text-yellow-400 font-semibold">Premium Feature</span>
+        {/* Enhanced Header */}
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-yellow-500/20 via-amber-500/20 to-yellow-500/20 border border-yellow-500/40 rounded-full mb-8 shadow-lg shadow-yellow-500/20 animate-fade-in">
+            <Sparkles className="text-yellow-300 drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" size={22} />
+            <span className="text-yellow-300 font-bold text-sm tracking-wide drop-shadow-[0_0_4px_rgba(253,224,71,0.6)]">Premium Feature</span>
           </div>
-          <h1 className="text-4xl md:text-6xl font-bold mb-4 pb-4 leading-tight bg-gradient-to-r from-pink-400 via-purple-400 to-cyan-400 text-transparent bg-clip-text">
+          <h1 className="text-5xl md:text-7xl font-extrabold mb-6 pb-6 leading-tight bg-gradient-to-r from-pink-400 via-purple-400 via-cyan-400 to-pink-400 text-transparent bg-clip-text animate-fade-in bg-[length:200%_auto] animate-gradient">
             {t.generator.title}
           </h1>
-          <p className="text-xl text-slate-400 max-w-2xl mx-auto">
+          <p className="text-xl md:text-2xl text-slate-300 max-w-3xl mx-auto leading-relaxed animate-fade-in" style={{ animationDelay: '0.1s' }}>
             {t.generator.subtitle}
           </p>
         </div>
 
-        {/* Generator Section */}
-        <div className="grid lg:grid-cols-2 gap-8 mb-12">
-          {/* Image Selection */}
-          <div className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-6">
-            <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-              <ImageIcon className="text-purple-400" size={24} />
-              {t.generator.selectImage}
-            </h2>
-            <p className="text-slate-400 text-sm mb-6">{t.generator.selectImageDesc}</p>
+        {/* Enhanced Generator Section */}
+        <div className="grid lg:grid-cols-2 gap-8 mb-16 items-stretch">
+          {/* Enhanced Image Selection */}
+          <div className="bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-900/80 backdrop-blur-xl border border-purple-500/30 rounded-3xl p-8 shadow-2xl shadow-purple-500/10 hover:shadow-purple-500/20 transition-all duration-500 hover:border-purple-500/50 flex flex-col">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl border border-purple-500/30">
+                <ImageIcon className="text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.6)]" size={28} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white">
+                  {t.generator.selectImage}
+                </h2>
+                <p className="text-slate-400 text-sm mt-1">{t.generator.selectImageDesc}</p>
+              </div>
+            </div>
 
             {allImages.length === 0 ? (
-              <div className="text-center py-12">
-                <ImageIcon className="mx-auto mb-4 text-slate-600" size={48} />
-                <p className="text-slate-400 mb-2">{t.generator.noImages}</p>
+              <div className="text-center py-16 bg-gradient-to-br from-slate-900/50 to-slate-800/30 rounded-2xl border border-purple-500/10">
+                <div className="relative w-20 h-20 mx-auto mb-6">
+                  <div className="absolute inset-0 rounded-full border-4 border-purple-500/20"></div>
+                  <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-purple-500 animate-spin"></div>
+                </div>
+                <ImageIcon className="mx-auto mb-4 text-slate-500" size={48} />
+                <p className="text-slate-300 mb-2 font-medium">{t.generator.noImages}</p>
                 <p className="text-slate-500 text-sm">{t.generator.analyzeFirst}</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-2 pb-2 scrollbar-hide auto-rows-max items-start">
+              <div className="grid grid-cols-2 gap-4 overflow-y-auto pr-2 pb-2 scrollbar-hide custom-scrollbar flex-1" style={{ maxHeight: '600px', gridAutoRows: 'min-content' }}>
                 {allImages.map((img, index) => (
-                  <button
-                    key={`${img.dreamId}-${index}`}
-                    onClick={() => setSelectedImage(img.url)}
-                    className={`relative group rounded-xl overflow-hidden transition-all duration-300 aspect-square w-full ${
-                      selectedImage === img.url
-                        ? 'ring-4 ring-pink-500 scale-95'
-                        : 'hover:scale-105'
-                    }`}
-                  >
+                  <div key={`${img.dreamId}-${index}`} className="w-full" style={{ aspectRatio: '1 / 1' }}>
+                    <button
+                      onClick={() => setSelectedImage(img.url)}
+                      className={`relative group rounded-2xl overflow-hidden transition-all duration-500 w-full h-full ${
+                        selectedImage === img.url
+                          ? 'ring-4 ring-pink-500 ring-offset-2 ring-offset-slate-900 scale-[0.98] shadow-2xl shadow-pink-500/50'
+                          : 'hover:scale-105 hover:shadow-xl hover:shadow-purple-500/20'
+                      }`}
+                      style={{ animationDelay: `${index * 0.05}s` }}
+                    >
                     {loadingImages[`select-${index}`] && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm z-10">
-                        <Loader2 className="animate-spin text-pink-400" size={24} />
+                      <div className="absolute inset-0 flex items-center justify-center bg-slate-900/90 backdrop-blur-md z-10 rounded-2xl">
+                        <Loader2 className="animate-spin text-pink-400" size={28} />
                       </div>
                     )}
                     <img
                       src={img.url}
                       alt="Dream"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       onLoadStart={() => setLoadingImages(prev => ({ ...prev, [`select-${index}`]: true }))}
                       onLoad={() => setLoadingImages(prev => ({ ...prev, [`select-${index}`]: false }))}
                       onError={() => setLoadingImages(prev => ({ ...prev, [`select-${index}`]: false }))}
                     />
-                    <div className={`absolute inset-0 bg-gradient-to-t from-black/80 to-transparent transition-opacity ${
+                    <div className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent transition-all duration-500 ${
                       selectedImage === img.url ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                     }`}>
-                      <div className="absolute bottom-0 left-0 right-0 p-3">
-                        <p className="text-white text-xs line-clamp-2">{img.dreamText.substring(0, 60)}...</p>
+                      <div className="absolute bottom-0 left-0 right-0 p-4">
+                        <p className="text-white text-xs font-medium line-clamp-2 drop-shadow-lg">{img.dreamText.substring(0, 60)}...</p>
                       </div>
                     </div>
                     {selectedImage === img.url && (
-                      <div className="absolute top-2 right-2 bg-pink-500 text-white rounded-full p-1.5">
-                        <Sparkles size={16} />
+                      <div className="absolute top-3 right-3 bg-gradient-to-br from-pink-500 to-purple-500 text-white rounded-full p-2 shadow-lg shadow-pink-500/50 animate-pulse">
+                        <Sparkles size={18} className="drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]" />
                       </div>
                     )}
-                  </button>
+                    {selectedImage === img.url && (
+                      <div className="absolute inset-0 border-2 border-pink-400/50 rounded-2xl animate-pulse"></div>
+                    )}
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Prompt & Generate */}
-          <div className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-6">
-            <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-              <Wand2 className="text-pink-400" size={24} />
-              {t.generator.promptLabel}
-            </h2>
+          {/* Enhanced Prompt & Generate */}
+          <div className="bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-900/80 backdrop-blur-xl border border-pink-500/30 rounded-3xl p-8 shadow-2xl shadow-pink-500/10 hover:shadow-pink-500/20 transition-all duration-500 hover:border-pink-500/50 flex flex-col">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-gradient-to-br from-pink-500/20 to-purple-500/20 rounded-xl border border-pink-500/30">
+                <Wand2 className="text-pink-400 drop-shadow-[0_0_8px_rgba(236,72,153,0.6)]" size={28} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white">
+                  {t.generator.promptLabel}
+                </h2>
+                <p className="text-slate-400 text-sm mt-1">Describe your transformation</p>
+              </div>
+            </div>
 
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder={t.generator.promptPlaceholder}
-              className="w-full h-32 px-4 py-3 bg-slate-950/50 border border-purple-500/30 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60 resize-none mb-4 transition-all"
+              className="w-full flex-1 min-h-[200px] px-5 py-4 bg-slate-950/70 border-2 border-purple-500/30 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/80 focus:ring-2 focus:ring-purple-500/30 resize-none mb-6 transition-all duration-300 text-sm leading-relaxed shadow-lg shadow-purple-500/5"
               disabled={isGenerating}
             />
 
             {selectedImage && (
-              <div className="mb-4">
-                <p className="text-slate-400 text-sm mb-2">Selected Image:</p>
-                <div className="relative bg-slate-900/50 rounded-lg overflow-hidden aspect-square">
+              <div className="mb-6 p-4 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-2xl border border-purple-500/20">
+                <p className="text-slate-300 text-sm mb-3 font-medium flex items-center gap-2">
+                  <Sparkles className="text-pink-400" size={16} />
+                  Selected Image:
+                </p>
+                <div className="relative bg-slate-900/50 rounded-xl overflow-hidden border-2 border-purple-500/30 shadow-lg" style={{ aspectRatio: '1 / 1', maxWidth: '300px' }}>
                   {loadingImages['selected-preview'] && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm z-10">
+                    <div className="absolute inset-0 flex items-center justify-center bg-slate-900/90 backdrop-blur-md z-10 rounded-xl">
                       <Loader2 className="animate-spin text-pink-400" size={32} />
                     </div>
                   )}
@@ -520,38 +548,46 @@ export default function Generator() {
                     onLoad={() => setLoadingImages(prev => ({ ...prev, 'selected-preview': false }))}
                     onError={() => setLoadingImages(prev => ({ ...prev, 'selected-preview': false }))}
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"></div>
                 </div>
               </div>
             )}
 
             <button
               onClick={handleGenerate}
-              disabled={isGenerating}
-              className={`w-full px-6 py-4 bg-gradient-to-r from-pink-600 to-purple-600 text-white font-semibold rounded-xl hover:from-pink-500 hover:to-purple-500 transition-all duration-300 hover:shadow-lg hover:shadow-pink-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
-                !selectedImage || !prompt.trim() ? 'opacity-60 cursor-not-allowed' : ''
+              disabled={isGenerating || !selectedImage || !prompt.trim()}
+              className={`w-full px-8 py-5 bg-gradient-to-r from-pink-600 via-purple-600 to-pink-600 text-white font-bold rounded-2xl transition-all duration-500 hover:from-pink-500 hover:via-purple-500 hover:to-pink-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 text-lg shadow-2xl shadow-pink-500/30 hover:shadow-pink-500/50 hover:scale-[1.02] active:scale-[0.98] ${
+                !selectedImage || !prompt.trim() ? 'opacity-60 cursor-not-allowed' : 'hover:shadow-2xl'
               }`}
             >
               {isGenerating ? (
                 <>
-                  <Loader2 className="animate-spin" size={20} />
-                  {t.generator.generating}
+                  <Loader2 className="animate-spin" size={24} />
+                  <span>{t.generator.generating}</span>
                 </>
               ) : (
                 <>
-                  <Wand2 size={20} />
-                  {t.generator.generateButton}
+                  <Wand2 size={24} className="drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" />
+                  <span>{t.generator.generateButton}</span>
                 </>
               )}
             </button>
           </div>
         </div>
 
-        {/* My Generations */}
-        <div className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-6">
-          <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-            <Sparkles className="text-yellow-400" size={24} />
-            {t.generator.myGenerations}
-          </h2>
+        {/* Enhanced My Generations */}
+        <div className="bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-900/80 backdrop-blur-xl border border-purple-500/30 rounded-3xl p-8 shadow-2xl shadow-purple-500/10">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="p-2 bg-gradient-to-br from-yellow-500/20 to-amber-500/20 rounded-xl border border-yellow-500/30">
+              <Sparkles className="text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)]" size={28} />
+            </div>
+            <div>
+              <h2 className="text-3xl font-bold text-white">
+                {t.generator.myGenerations}
+              </h2>
+              <p className="text-slate-400 text-sm mt-1">{generations.length} {generations.length === 1 ? 'generation' : 'generations'}</p>
+            </div>
+          </div>
 
           {isFirstLoad ? (
             <div className="text-center py-12">
@@ -571,10 +607,11 @@ export default function Generator() {
             </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {generations.map((gen) => (
+              {generations.map((gen, index) => (
                 <div
                   key={gen.id}
-                  className="group bg-slate-950/30 rounded-xl overflow-hidden border border-purple-500/10 hover:border-purple-500/30 transition-all duration-300"
+                  className="group bg-gradient-to-br from-slate-950/50 to-slate-900/30 rounded-2xl overflow-hidden border border-purple-500/20 hover:border-purple-500/40 transition-all duration-500 hover:shadow-2xl hover:shadow-purple-500/20 hover:scale-[1.02]"
+                  style={{ animationDelay: `${index * 0.1}s` }}
                 >
                   <div className="relative">
                     {(!gen.generated_image_url || gen.status === 'processing') ? (
@@ -624,25 +661,26 @@ export default function Generator() {
                       </div>
                     )}
                   </div>
-                  <div className="p-4">
-                    <p className="text-slate-300 text-sm mb-3 line-clamp-2">{gen.prompt}</p>
-                    <p className="text-slate-500 text-xs mb-4">
+                  <div className="p-5 bg-gradient-to-br from-slate-950/50 to-slate-900/30">
+                    <p className="text-slate-200 text-sm mb-3 line-clamp-2 font-medium leading-relaxed">{gen.prompt}</p>
+                    <p className="text-slate-400 text-xs mb-4 flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
                       {t.generator.generatedAt}: {new Date(gen.created_at).toLocaleDateString()}
                     </p>
-                    <div className="flex gap-2">
+                    <div className="flex gap-3">
                       <button
                         onClick={() => downloadImage(gen.generated_image_url)}
                         disabled={!gen.generated_image_url || gen.status === 'processing'}
-                        className="flex-1 px-3 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-600/30 to-pink-600/30 hover:from-purple-600/40 hover:to-pink-600/40 text-purple-300 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-purple-500/20 border border-purple-500/20"
                       >
-                        <Download size={16} />
+                        <Download size={18} />
                         {t.generator.download}
                       </button>
                       <button
                         onClick={() => deleteGeneration(gen.id)}
-                        className="px-3 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg transition-colors"
+                        className="px-4 py-2.5 bg-gradient-to-r from-red-600/20 to-red-500/20 hover:from-red-600/30 hover:to-red-500/30 text-red-400 rounded-xl transition-all duration-300 border border-red-500/20 hover:shadow-lg hover:shadow-red-500/20"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={18} />
                       </button>
                     </div>
                   </div>

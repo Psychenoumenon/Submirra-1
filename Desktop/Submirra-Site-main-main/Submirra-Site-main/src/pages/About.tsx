@@ -7,9 +7,9 @@ export default function About() {
   return (
     <div className="min-h-screen relative pt-20 md:pt-24 pb-12 md:pb-16 px-4 md:px-6">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-40 right-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-40 left-20 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/2 w-[400px] h-[400px] bg-pink-500/5 rounded-full blur-3xl"></div>
+        <div className="absolute top-40 right-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-float"></div>
+        <div className="absolute bottom-40 left-20 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-float animation-delay-2000"></div>
+        <div className="absolute top-1/2 left-1/2 w-[400px] h-[400px] bg-pink-500/5 rounded-full blur-3xl animate-float animation-delay-4000"></div>
       </div>
 
       <div className="relative max-w-4xl mx-auto z-10">
@@ -23,10 +23,10 @@ export default function About() {
         </div>
 
         <div className="space-y-6 md:space-y-12">
-          <div className="bg-slate-900/50 backdrop-blur-sm border border-pink-500/20 rounded-2xl p-5 md:p-8 hover:border-pink-500/30 transition-all duration-500 hover:shadow-xl hover:shadow-pink-500/10 hover:-translate-y-1 animate-fade-in-delay">
+          <div className="bg-slate-900/50 backdrop-blur-sm border border-pink-500/20 rounded-2xl p-5 md:p-8 hover:border-pink-500/30 transition-all duration-500 hover:shadow-xl hover:shadow-pink-500/10 hover:-translate-y-1 animate-fade-in-delay group">
             <div className="flex items-start gap-3 md:gap-4">
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-pink-500/20 to-pink-600/20 flex items-center justify-center border border-pink-500/30 flex-shrink-0">
-                <Brain className="text-pink-400" size={20} />
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-pink-500/20 to-pink-600/20 flex items-center justify-center border border-pink-500/30 flex-shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-pink-500/30">
+                <Brain className="text-pink-400 transition-all duration-300 group-hover:drop-shadow-[0_0_8px_rgba(236,72,153,0.6)]" size={20} />
               </div>
               <div className="flex-1 min-w-0">
                 <h2 className="text-xl md:text-2xl font-semibold text-white mb-2 md:mb-3">{t.about.missionTitle}</h2>
@@ -37,35 +37,35 @@ export default function About() {
             </div>
           </div>
 
-          <div className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-5 md:p-8 hover:border-purple-500/30 transition-all duration-500 hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-1 animate-fade-in-delay-2">
+          <div className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-5 md:p-8 hover:border-purple-500/30 transition-all duration-500 hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-1 animate-fade-in-delay-2 group">
             <div className="flex items-start gap-3 md:gap-4">
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-purple-500/20 to-purple-600/20 flex items-center justify-center border border-purple-500/30 flex-shrink-0">
-                <Sparkles className="text-purple-400" size={20} />
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-purple-500/20 to-purple-600/20 flex items-center justify-center border border-purple-500/30 flex-shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-purple-500/30">
+                <Sparkles className="text-purple-400 transition-all duration-300 group-hover:drop-shadow-[0_0_8px_rgba(168,85,247,0.6)]" size={20} />
               </div>
               <div className="flex-1 min-w-0">
                 <h2 className="text-xl md:text-2xl font-semibold text-white mb-2 md:mb-3">{t.about.howItWorksTitle}</h2>
                 <p className="text-sm md:text-base text-slate-300 leading-relaxed mb-3 md:mb-4">
                   {t.about.howItWorksDesc}
                 </p>
-                <ul className="space-y-2 text-sm md:text-base text-slate-300">
-                  <li className="flex gap-2">
-                    <span className="text-purple-400 flex-shrink-0">•</span>
+                <ul className="space-y-2.5 text-sm md:text-base text-slate-300">
+                  <li className="flex gap-2.5 items-start transition-all duration-200 hover:text-white hover:translate-x-1">
+                    <span className="text-purple-400 flex-shrink-0 mt-0.5 group-hover:scale-125 transition-transform duration-200">•</span>
                     <span>{t.about.step1}</span>
                   </li>
-                  <li className="flex gap-2">
-                    <span className="text-purple-400 flex-shrink-0">•</span>
+                  <li className="flex gap-2.5 items-start transition-all duration-200 hover:text-white hover:translate-x-1">
+                    <span className="text-purple-400 flex-shrink-0 mt-0.5 group-hover:scale-125 transition-transform duration-200">•</span>
                     <span>{t.about.step2}</span>
                   </li>
-                  <li className="flex gap-2">
-                    <span className="text-purple-400 flex-shrink-0">•</span>
+                  <li className="flex gap-2.5 items-start transition-all duration-200 hover:text-white hover:translate-x-1">
+                    <span className="text-purple-400 flex-shrink-0 mt-0.5 group-hover:scale-125 transition-transform duration-200">•</span>
                     <span>{t.about.step3}</span>
                   </li>
-                  <li className="flex gap-2">
-                    <span className="text-purple-400 flex-shrink-0">•</span>
+                  <li className="flex gap-2.5 items-start transition-all duration-200 hover:text-white hover:translate-x-1">
+                    <span className="text-purple-400 flex-shrink-0 mt-0.5 group-hover:scale-125 transition-transform duration-200">•</span>
                     <span>{t.about.step4}</span>
                   </li>
-                  <li className="flex gap-2">
-                    <span className="text-purple-400 flex-shrink-0">•</span>
+                  <li className="flex gap-2.5 items-start transition-all duration-200 hover:text-white hover:translate-x-1">
+                    <span className="text-purple-400 flex-shrink-0 mt-0.5 group-hover:scale-125 transition-transform duration-200">•</span>
                     <span>{t.about.step5}</span>
                   </li>
                 </ul>
@@ -73,10 +73,10 @@ export default function About() {
             </div>
           </div>
 
-          <div className="bg-slate-900/50 backdrop-blur-sm border border-green-500/20 rounded-2xl p-5 md:p-8 hover:border-green-500/30 transition-all duration-500 hover:shadow-xl hover:shadow-green-500/10 hover:-translate-y-1 animate-fade-in-delay-3">
+          <div className="bg-slate-900/50 backdrop-blur-sm border border-green-500/20 rounded-2xl p-5 md:p-8 hover:border-green-500/30 transition-all duration-500 hover:shadow-xl hover:shadow-green-500/10 hover:-translate-y-1 animate-fade-in-delay-3 group">
             <div className="flex items-start gap-3 md:gap-4">
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-green-500/20 to-green-600/20 flex items-center justify-center border border-green-500/30 flex-shrink-0">
-                <Users className="text-green-400" size={20} />
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-green-500/20 to-green-600/20 flex items-center justify-center border border-green-500/30 flex-shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-green-500/30">
+                <Users className="text-green-400 transition-all duration-300 group-hover:drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]" size={20} />
               </div>
               <div className="flex-1 min-w-0">
                 <h2 className="text-xl md:text-2xl font-semibold text-white mb-2 md:mb-3">{t.about.socialTitle}</h2>
@@ -87,10 +87,10 @@ export default function About() {
             </div>
           </div>
 
-          <div className="bg-slate-900/50 backdrop-blur-sm border border-cyan-500/20 rounded-2xl p-5 md:p-8 hover:border-cyan-500/30 transition-all duration-500 hover:shadow-xl hover:shadow-cyan-500/10 hover:-translate-y-1 animate-fade-in-delay-4">
+          <div className="bg-slate-900/50 backdrop-blur-sm border border-cyan-500/20 rounded-2xl p-5 md:p-8 hover:border-cyan-500/30 transition-all duration-500 hover:shadow-xl hover:shadow-cyan-500/10 hover:-translate-y-1 animate-fade-in-delay-4 group">
             <div className="flex items-start gap-3 md:gap-4">
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 flex items-center justify-center border border-cyan-500/30 flex-shrink-0">
-                <Shield className="text-cyan-400" size={20} />
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 flex items-center justify-center border border-cyan-500/30 flex-shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-cyan-500/30">
+                <Shield className="text-cyan-400 transition-all duration-300 group-hover:drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]" size={20} />
               </div>
               <div className="flex-1 min-w-0">
                 <h2 className="text-xl md:text-2xl font-semibold text-white mb-2 md:mb-3">{t.about.privacyTitle}</h2>
@@ -101,10 +101,12 @@ export default function About() {
             </div>
           </div>
 
-          <div className="text-center pt-6 md:pt-8">
-            <p className="text-sm md:text-base text-slate-400 px-4">
-              {t.about.quote}
-            </p>
+          <div className="text-center pt-6 md:pt-8 animate-fade-in-delay-5">
+            <div className="inline-block bg-slate-900/30 backdrop-blur-sm border border-slate-700/30 rounded-xl px-6 py-4 hover:border-slate-600/50 transition-all duration-300">
+              <p className="text-sm md:text-base text-slate-400 px-4 leading-relaxed">
+                {t.about.quote}
+              </p>
+            </div>
           </div>
         </div>
       </div>

@@ -315,6 +315,10 @@ export default function Pricing() {
                 <Check className="text-pink-400 flex-shrink-0 mt-1" size={16} />
                 <span>{t.pricing.premium.feature9}</span>
               </li>
+              <li className="flex items-start gap-2 text-slate-300 text-sm">
+                <Check className="text-pink-400 flex-shrink-0 mt-1" size={16} />
+                <span>{t.pricing.premium.feature10}</span>
+              </li>
             </ul>
 
             {/* TEMPORARILY DISABLED: Premium plan button disabled - can be re-enabled later */}
@@ -375,11 +379,23 @@ export default function Pricing() {
                 </li>
                 <li className="flex items-start gap-2 text-slate-200 text-sm">
                   <Check className="text-yellow-400 flex-shrink-0 mt-1" size={16} />
+                  <span>{t.pricing.ruyagezer.feature8}</span>
+                </li>
+                <li className="flex items-start gap-2 text-slate-200 text-sm">
+                  <Check className="text-yellow-400 flex-shrink-0 mt-1" size={16} />
                   <span>{t.pricing.ruyagezer.feature9}</span>
                 </li>
                 <li className="flex items-start gap-2 text-slate-200 text-sm">
                   <Check className="text-yellow-400 flex-shrink-0 mt-1" size={16} />
                   <span>{t.pricing.ruyagezer.feature10}</span>
+                </li>
+                <li className="flex items-start gap-2 text-slate-200 text-sm">
+                  <Check className="text-yellow-400 flex-shrink-0 mt-1" size={16} />
+                  <span>{t.pricing.ruyagezer.feature11}</span>
+                </li>
+                <li className="flex items-start gap-2 text-slate-200 text-sm">
+                  <Check className="text-yellow-400 flex-shrink-0 mt-1" size={16} />
+                  <span>{t.pricing.ruyagezer.feature12}</span>
                 </li>
               </ul>
 

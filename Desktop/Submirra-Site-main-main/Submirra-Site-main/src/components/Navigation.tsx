@@ -5,7 +5,7 @@ import Notifications from './Notifications';
 import { useNavigate, useCurrentPage } from './Router';
 import { useAuth } from '../lib/AuthContext';
 import { useLanguage } from '../lib/i18n';
-import { Menu, X, MessageSquare, User, Sparkles, Lock, LogOut, Settings } from 'lucide-react';
+import { Menu, X, MessageSquare, User, Sparkles, Lock, LogOut, Settings, Home, Info, Users, BookOpen, Mail, Brain } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export default function Navigation() {
@@ -19,15 +19,15 @@ export default function Navigation() {
   const [isPremium, setIsPremium] = useState(false);
 
   const navItems = [
-    { label: t.nav.home, path: '/' as const },
-    { label: t.nav.about, path: '/about' as const },
-    { label: t.nav.social, path: '/social' as const },
-    { label: t.nav.analyze, path: '/analyze' as const },
-    { label: t.nav.library, path: '/library' as const },
+    { label: t.nav.home, path: '/' as const, icon: Home },
+    { label: t.nav.about, path: '/about' as const, icon: Info },
+    { label: t.nav.social, path: '/social' as const, icon: Users },
+    { label: t.nav.analyze, path: '/analyze' as const, icon: Brain },
+    { label: t.nav.library, path: '/library' as const, icon: BookOpen },
   ];
 
   const userNavItems = [
-    { label: t.nav.contact, path: '/contact' as const },
+    { label: t.nav.contact, path: '/contact' as const, icon: Mail },
   ];
 
   const premiumNavItems = [
@@ -146,69 +146,193 @@ export default function Navigation() {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-950/90 backdrop-blur-xl border-b border-pink-500/20 shadow-lg shadow-pink-500/5">
       <div className="max-w-7xl mx-auto px-4 py-2">
-        <div className="flex items-center justify-between gap-12">
+        <div className="flex items-center gap-6">
           {/* Logo - En Sol */}
           <div className="flex items-center flex-shrink-0">
             <Logo />
           </div>
 
           {/* Nav Items - Ortada */}
-          <div className="hidden lg:flex items-center gap-6 flex-1 justify-center">
-            {navItems.map((item) => (
-              <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className={`text-sm font-medium transition-all duration-300 hover:text-pink-400 relative group ${
-                  currentPage === item.path
-                    ? 'text-pink-400 drop-shadow-[0_0_8px_rgba(236,72,153,0.6)]'
-                    : 'text-slate-300'
-                }`}
-              >
-                {item.label}
-                <span className={`absolute bottom-0 left-0 w-0 h-0.5 bg-pink-400 transition-all duration-300 group-hover:w-full ${currentPage === item.path ? 'w-full' : ''}`}></span>
-              </button>
-            ))}
+          <div className="hidden lg:flex items-center gap-3 flex-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentPage === item.path;
+              
+              // Her nav item için farklı renkler
+              const colorConfig: Record<string, { text: string; bg: string; shadow: string; badge: string; line: string; hover: string; hoverIcon: string; iconGlow: string }> = {
+                '/': { 
+                  text: 'text-pink-400', 
+                  bg: 'bg-pink-500/10', 
+                  shadow: 'shadow-pink-500/20', 
+                  badge: 'bg-pink-400',
+                  line: 'from-pink-400 via-pink-500 to-pink-400',
+                  hover: 'hover:text-pink-400',
+                  hoverIcon: 'group-hover:text-pink-400',
+                  iconGlow: 'rgba(236,72,153,0.8)'
+                },
+                '/about': { 
+                  text: 'text-pink-400', 
+                  bg: 'bg-pink-500/10', 
+                  shadow: 'shadow-pink-500/20', 
+                  badge: 'bg-pink-400',
+                  line: 'from-pink-400 via-pink-500 to-pink-400',
+                  hover: 'hover:text-pink-400',
+                  hoverIcon: 'group-hover:text-pink-400',
+                  iconGlow: 'rgba(236,72,153,0.8)'
+                },
+                '/social': { 
+                  text: 'text-pink-400', 
+                  bg: 'bg-pink-500/10', 
+                  shadow: 'shadow-pink-500/20', 
+                  badge: 'bg-pink-400',
+                  line: 'from-pink-400 via-pink-500 to-pink-400',
+                  hover: 'hover:text-pink-400',
+                  hoverIcon: 'group-hover:text-pink-400',
+                  iconGlow: 'rgba(236,72,153,0.8)'
+                },
+                '/analyze': { 
+                  text: 'text-pink-400', 
+                  bg: 'bg-pink-500/10', 
+                  shadow: 'shadow-pink-500/20', 
+                  badge: 'bg-pink-400',
+                  line: 'from-pink-400 via-pink-500 to-pink-400',
+                  hover: 'hover:text-pink-400',
+                  hoverIcon: 'group-hover:text-pink-400',
+                  iconGlow: 'rgba(236,72,153,0.8)'
+                },
+                '/library': { 
+                  text: 'text-pink-400', 
+                  bg: 'bg-pink-500/10', 
+                  shadow: 'shadow-pink-500/20', 
+                  badge: 'bg-pink-400',
+                  line: 'from-pink-400 via-pink-500 to-pink-400',
+                  hover: 'hover:text-pink-400',
+                  hoverIcon: 'group-hover:text-pink-400',
+                  iconGlow: 'rgba(236,72,153,0.8)'
+                },
+              };
+              
+              const colors = colorConfig[item.path] || colorConfig['/'];
+              
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => navigate(item.path)}
+                  className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-300 relative group whitespace-nowrap ${
+                    isActive
+                      ? `text-white ${colors.bg} shadow-lg ${colors.shadow} scale-105`
+                      : `text-white ${colors.hover} hover:bg-slate-800/50 hover:scale-105`
+                  }`}
+                >
+                  <Icon 
+                    size={16} 
+                    className={`transition-all duration-300 flex-shrink-0 ${
+                      isActive 
+                        ? colors.text
+                        : `text-slate-400 ${colors.hoverIcon}`
+                    }`}
+                    style={isActive ? { 
+                      filter: `drop-shadow(0 0 8px ${colors.iconGlow})`
+                    } : {}}
+                  />
+                  <span className="text-white transition-all duration-300">
+                    {item.label}
+                  </span>
+                  {isActive && (
+                    <span className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${colors.badge} animate-pulse`} style={{ boxShadow: `0 0 8px ${colors.iconGlow}` }}></span>
+                  )}
+                  <span className={`absolute -bottom-1 left-0 w-0 h-[2px] bg-gradient-to-r ${colors.line} transition-all duration-500 ease-out group-hover:w-full ${isActive ? 'w-full' : ''}`} style={isActive ? { boxShadow: `0 0 8px ${colors.iconGlow}` } : {}}></span>
+                  {isActive && (
+                    <span className={`absolute -bottom-1 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-current to-transparent opacity-50 animate-pulse`} style={{ color: 'inherit' }}></span>
+                  )}
+                </button>
+              );
+            })}
 
             {/* Generator Link - Herkes için görünür */}
-            {user && premiumNavItems.map((item) => (
-              <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className={`flex items-center gap-1.5 text-sm font-medium transition-all duration-300 hover:text-pink-400 relative group ${
-                  currentPage === item.path
-                    ? 'text-pink-400 drop-shadow-[0_0_8px_rgba(236,72,153,0.6)]'
-                    : 'text-slate-300'
-                }`}
-              >
-                <item.icon size={16} className={isPremium ? "text-yellow-300 drop-shadow-[0_0_6px_rgba(253,224,71,0.6)]" : "text-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.4)]"} />
-                {item.label}
-                {!isPremium && <Lock size={12} className="text-pink-400 ml-1" />}
-                <span className={`absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-pink-400 to-yellow-400 transition-all duration-300 group-hover:w-full ${currentPage === item.path ? 'w-full' : ''}`}></span>
-              </button>
-            ))}
+            {user && premiumNavItems.map((item) => {
+              const isActive = currentPage === item.path;
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => navigate(item.path)}
+                  className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-300 relative group whitespace-nowrap ${
+                    isActive
+                      ? 'text-white bg-gradient-to-r from-pink-500/10 to-yellow-500/10 shadow-lg shadow-pink-500/20 scale-105'
+                      : 'text-white hover:bg-slate-800/50 hover:scale-105'
+                  }`}
+                >
+                  <item.icon size={16} className={`flex-shrink-0 ${isPremium ? (isActive ? "text-yellow-300 drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" : "text-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.4)] group-hover:drop-shadow-[0_0_6px_rgba(253,224,71,0.6)]") : "text-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.4)]"}`} />
+                  <span className="text-white">{item.label}</span>
+                  {!isPremium && <Lock size={12} className="text-pink-400 flex-shrink-0" />}
+                  <span className={`absolute -bottom-1 left-0 w-0 h-[2px] bg-gradient-to-r from-pink-400 via-yellow-400 to-pink-400 transition-all duration-500 ease-out group-hover:w-full ${isActive ? 'w-full' : ''} ${isActive ? 'shadow-[0_0_10px_rgba(236,72,153,0.8),0_0_6px_rgba(250,204,21,0.6)]' : ''}`}></span>
+                  {isActive && (
+                    <span className="absolute -bottom-1 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-yellow-300 to-transparent opacity-50 animate-pulse"></span>
+                  )}
+                  {isActive && (
+                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_8px_rgba(250,204,21,0.8)]"></span>
+                  )}
+                </button>
+              );
+            })}
 
-            {userNavItems.map((item) => (
-              <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className={`text-sm font-medium transition-all duration-300 hover:text-pink-400 relative group ${
-                  currentPage === item.path
-                    ? 'text-pink-400 drop-shadow-[0_0_8px_rgba(236,72,153,0.6)]'
-                    : 'text-slate-300'
-                }`}
-              >
-                {item.label}
-                <span className={`absolute bottom-0 left-0 w-0 h-0.5 bg-pink-400 transition-all duration-300 group-hover:w-full ${currentPage === item.path ? 'w-full' : ''}`}></span>
-              </button>
-            ))}
+            {userNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentPage === item.path;
+              // Contact için özel renk - Pink
+              const colors = { 
+                text: 'text-pink-400', 
+                bg: 'bg-pink-500/10', 
+                shadow: 'shadow-pink-500/20', 
+                badge: 'bg-pink-400',
+                line: 'from-pink-400 via-pink-500 to-pink-400',
+                hover: 'hover:text-pink-400',
+                hoverIcon: 'group-hover:text-pink-400',
+                iconGlow: 'rgba(236,72,153,0.8)'
+              };
+              
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => navigate(item.path)}
+                  className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-300 relative group whitespace-nowrap ${
+                    isActive
+                      ? `text-white ${colors.bg} shadow-lg ${colors.shadow} scale-105`
+                      : `text-white ${colors.hover} hover:bg-slate-800/50 hover:scale-105`
+                  }`}
+                >
+                  <Icon 
+                    size={16} 
+                    className={`transition-all duration-300 flex-shrink-0 ${
+                      isActive 
+                        ? colors.text
+                        : `text-slate-400 ${colors.hoverIcon}`
+                    }`}
+                    style={isActive ? { 
+                      filter: `drop-shadow(0 0 8px ${colors.iconGlow})`
+                    } : {}}
+                  />
+                  <span className="text-white transition-all duration-300">
+                    {item.label}
+                  </span>
+                  {isActive && (
+                    <span className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${colors.badge} animate-pulse`} style={{ boxShadow: `0 0 8px ${colors.iconGlow}` }}></span>
+                  )}
+                  <span className={`absolute -bottom-1 left-0 w-0 h-[2px] bg-gradient-to-r ${colors.line} transition-all duration-500 ease-out group-hover:w-full ${isActive ? 'w-full' : ''}`} style={isActive ? { boxShadow: `0 0 8px ${colors.iconGlow}` } : {}}></span>
+                  {isActive && (
+                    <span className={`absolute -bottom-1 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-current to-transparent opacity-50 animate-pulse`} style={{ color: 'inherit' }}></span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {/* Sağ Menü - Pricing, Language, User */}
-          <div className="hidden lg:flex items-center gap-4 flex-shrink-0">
+          <div className="hidden lg:flex items-center gap-3 flex-shrink-0">
             <button
               onClick={() => navigate('/pricing')}
-              className={`px-4 py-2 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 text-white font-medium hover:from-pink-500 hover:to-purple-500 transition-all duration-300 hover:shadow-lg hover:shadow-pink-500/30 hover:scale-105 ${
-                currentPage === '/pricing' ? 'ring-2 ring-pink-400' : ''
+              className={`px-4 py-2 rounded-lg bg-gradient-to-r from-pink-600 via-purple-600 via-pink-500 to-purple-600 text-white text-sm font-semibold hover:shadow-xl hover:shadow-pink-500/40 hover:scale-105 active:scale-95 transition-all duration-300 bg-[length:200%_auto] animate-gradient ${
+                currentPage === '/pricing' ? 'ring-2 ring-pink-400 ring-offset-2 ring-offset-slate-950' : ''
               }`}
             >
               {t.nav.buy}
