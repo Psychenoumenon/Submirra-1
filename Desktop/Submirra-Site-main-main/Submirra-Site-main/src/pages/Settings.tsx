@@ -46,6 +46,8 @@ export default function Settings() {
   const [loadingFavoriteUsers, setLoadingFavoriteUsers] = useState(false);
   const [showReadReceipts, setShowReadReceipts] = useState(true);
   const [loadingReadReceipts, setLoadingReadReceipts] = useState(false);
+  const [showOnlineStatus, setShowOnlineStatus] = useState(true);
+  const [loadingOnlineStatus, setLoadingOnlineStatus] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -195,14 +197,15 @@ export default function Settings() {
     try {
       const { data } = await supabase
         .from('profiles')
-        .select('show_read_receipts')
+        .select('show_read_receipts, show_online_status')
         .eq('id', user.id)
         .single();
       if (data) {
         setShowReadReceipts(data.show_read_receipts !== false);
+        setShowOnlineStatus(data.show_online_status !== false);
       }
     } catch (error) {
-      console.error('Error loading read receipts setting:', error);
+      console.error('Error loading privacy settings:', error);
     }
   };
 
@@ -280,6 +283,32 @@ export default function Settings() {
       showToast(t.settings.readReceiptsUpdateError || 'Failed to update read receipts', 'error');
     } finally {
       setLoadingReadReceipts(false);
+    }
+  };
+
+  const updateOnlineStatus = async (enabled: boolean) => {
+    if (!user) return;
+    setLoadingOnlineStatus(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ show_online_status: enabled })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setShowOnlineStatus(enabled);
+      showToast(
+        enabled 
+          ? 'Online durumu gösteriliyor'
+          : 'Online durumu gizleniyor',
+        'success'
+      );
+    } catch (error) {
+      console.error('Error updating online status:', error);
+      showToast('Online durumu güncellenemedi', 'error');
+    } finally {
+      setLoadingOnlineStatus(false);
     }
   };
 
@@ -644,6 +673,24 @@ export default function Settings() {
                         type="checkbox"
                         checked={showReadReceipts}
                         onChange={(e) => updateReadReceipts(e.target.checked)}
+                        className="w-5 h-5 rounded cursor-pointer ml-4"
+                      />
+                    )}
+                  </label>
+                </div>
+                <div className="p-4 bg-slate-950/30 rounded-xl border border-purple-500/10">
+                  <label className="flex items-center justify-between cursor-pointer">
+                    <div className="flex-1">
+                      <span className="text-white font-medium">Online Durumunu Göster</span>
+                      <p className="text-slate-400 text-sm mt-1">Diğer kullanıcılar online olup olmadığınızı görebilsin</p>
+                    </div>
+                    {loadingOnlineStatus ? (
+                      <Loader2 className="animate-spin text-purple-400 ml-4" size={20} />
+                    ) : (
+                      <input
+                        type="checkbox"
+                        checked={showOnlineStatus}
+                        onChange={(e) => updateOnlineStatus(e.target.checked)}
                         className="w-5 h-5 rounded cursor-pointer ml-4"
                       />
                     )}
