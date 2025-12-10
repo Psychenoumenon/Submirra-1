@@ -176,6 +176,7 @@ interface Translations {
       generatorsPremiumOnly: string;
       upgradeForGenerators: string;
       noGenerations: string;
+      pending: string;
       deleteConfirm: string;
       dreamDeleted: string;
       deleteFailed: string;

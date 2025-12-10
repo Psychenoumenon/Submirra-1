@@ -512,7 +512,7 @@ export default function Messages() {
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto overscroll-contain">
               {loading ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="animate-spin rounded-full h-8 w-8 border-2 border-pink-500 border-t-transparent"></div>
@@ -577,7 +577,10 @@ export default function Messages() {
                   >
                     <ArrowLeft size={20} />
                   </button>
-                  <div className="relative">
+                  <button
+                    onClick={() => navigate(`/profile/${selectedUserProfile.id}`)}
+                    className="relative hover:opacity-80 transition-opacity"
+                  >
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center text-white font-semibold">
                       {selectedUserProfile.avatar_url ? (
                         <img src={selectedUserProfile.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
@@ -588,8 +591,11 @@ export default function Messages() {
                     {selectedUserProfile.is_online && selectedUserProfile.show_online_status !== false && (
                       <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-slate-900 rounded-full"></div>
                     )}
-                  </div>
-                  <div className="flex-1">
+                  </button>
+                  <button
+                    onClick={() => navigate(`/profile/${selectedUserProfile.id}`)}
+                    className="flex-1 text-left hover:opacity-80 transition-opacity"
+                  >
                     <p className="text-white font-medium">{selectedUserProfile.full_name}</p>
                     {selectedUserProfile.is_online && selectedUserProfile.show_online_status !== false ? (
                       <p className="text-xs text-green-400">Çevrimiçi</p>
@@ -598,7 +604,7 @@ export default function Messages() {
                         <p className="text-sm text-slate-400">@{selectedUserProfile.username}</p>
                       )
                     )}
-                  </div>
+                  </button>
                   <div className="relative">
                     <button
                       onClick={() => setShowMenu(!showMenu)}
@@ -628,7 +634,7 @@ export default function Messages() {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-4">
                   {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center">
                       <div className="w-16 h-16 rounded-full bg-slate-800/50 flex items-center justify-center mb-4">

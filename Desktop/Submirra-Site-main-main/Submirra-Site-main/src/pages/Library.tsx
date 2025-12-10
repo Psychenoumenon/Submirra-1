@@ -313,11 +313,16 @@ export default function Library() {
     if (user) {
       localStorage.setItem(`favorites_${user.id}`, JSON.stringify(Array.from(newFavorites)));
     }
+    const isFavorite = newFavorites.has(dreamId);
     setDreams((prev) =>
       prev.map((dream) =>
-        dream.id === dreamId ? { ...dream, is_favorite: newFavorites.has(dreamId) } : dream
+        dream.id === dreamId ? { ...dream, is_favorite: isFavorite } : dream
       )
     );
+    // Update selectedDream if it's the one being toggled
+    if (selectedDream?.id === dreamId) {
+      setSelectedDream({ ...selectedDream, is_favorite: isFavorite });
+    }
   };
 
   const handleTogglePrivacy = async (dreamId: string, currentPrivacy: boolean, e: React.MouseEvent) => {
@@ -339,6 +344,11 @@ export default function Library() {
           dream.id === dreamId ? { ...dream, is_public: newPrivacy } : dream
         )
       );
+
+      // Update selectedDream if it's the one being toggled
+      if (selectedDream?.id === dreamId) {
+        setSelectedDream({ ...selectedDream, is_public: newPrivacy });
+      }
 
       showToast(t.library.privacyUpdated, 'success');
     } catch (error) {
@@ -444,6 +454,11 @@ export default function Library() {
           ? { ...dream, primary_image_index: imageIndex }
           : dream
       ));
+      
+      // Update selectedDream if it's the one being updated
+      if (selectedDream?.id === dreamId) {
+        setSelectedDream({ ...selectedDream, primary_image_index: imageIndex });
+      }
       
       // Reset carousel index to 0 (primary image)
       setCarouselIndices(prev => ({ ...prev, [dreamId]: 0 }));

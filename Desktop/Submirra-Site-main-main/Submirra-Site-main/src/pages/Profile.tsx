@@ -79,6 +79,39 @@ export default function Profile() {
   const [isCurrentUserDeveloper, setIsCurrentUserDeveloper] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Add a state to track URL pathname changes
+  const [locationPath, setLocationPath] = useState(window.location.pathname);
+
+  // Listen for pathname changes (important for profile switching)
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setLocationPath(window.location.pathname);
+    };
+
+    // Listen for both popstate (browser back/forward) and custom events
+    window.addEventListener('popstate', handleLocationChange);
+    
+    // Create a mutation observer to detect pathname changes
+    const observer = new MutationObserver(() => {
+      if (window.location.pathname !== locationPath) {
+        handleLocationChange();
+      }
+    });
+    
+    // Also check periodically in case navigate changes URL without triggering events
+    const interval = setInterval(() => {
+      if (window.location.pathname !== locationPath) {
+        handleLocationChange();
+      }
+    }, 100);
+
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      observer.disconnect();
+      clearInterval(interval);
+    };
+  }, [locationPath]);
+
   useEffect(() => {
     const loadProfileData = async () => {
       try {
@@ -93,6 +126,17 @@ export default function Profile() {
 
         if (userId) {
           // Viewing another user's profile
+          // Clear all state immediately to prevent showing old user's data
+          setProfile(null);
+          setStats(null);
+          setPublicDreams([]);
+          setIsFollowing(false);
+          setIsBlocked(false);
+          setIsBlockedBy(false);
+          setIsFavorite(false);
+          setReportCount(0);
+          setDangerLevel('low');
+          
           setProfileUserId(userId);
           setIsOwnProfile(user ? userId === user.id : false);
           
@@ -155,7 +199,7 @@ export default function Profile() {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, authLoading, currentPage]);
+  }, [user, authLoading, currentPage, locationPath]);
 
   const loadProfile = async () => {
     if (!user) return;
@@ -1899,11 +1943,12 @@ export default function Profile() {
                   {followersList.map((follower) => (
                     <button
                       key={follower.id}
-                      onClick={() => {
-                        setShowFollowersModal(false);
+                      onClick={(e) => {
+                        e.stopPropagation();
                         navigate(`/profile/${follower.id}`);
+                        setTimeout(() => setShowFollowersModal(false), 50);
                       }}
-                      className="w-full flex items-center gap-3 p-3 hover:bg-slate-950/50 rounded-lg transition-colors"
+                      className="w-full flex items-center gap-3 p-3 hover:bg-slate-950/50 rounded-lg transition-colors cursor-pointer"
                     >
                       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center overflow-hidden">
                         {follower.avatar_url ? (
@@ -1956,11 +2001,12 @@ export default function Profile() {
                   {followingList.map((following) => (
                     <button
                       key={following.id}
-                      onClick={() => {
-                        setShowFollowingModal(false);
+                      onClick={(e) => {
+                        e.stopPropagation();
                         navigate(`/profile/${following.id}`);
+                        setTimeout(() => setShowFollowingModal(false), 50);
                       }}
-                      className="w-full flex items-center gap-3 p-3 hover:bg-slate-950/50 rounded-lg transition-colors"
+                      className="w-full flex items-center gap-3 p-3 hover:bg-slate-950/50 rounded-lg transition-colors cursor-pointer"
                     >
                       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center overflow-hidden">
                         {following.avatar_url ? (
