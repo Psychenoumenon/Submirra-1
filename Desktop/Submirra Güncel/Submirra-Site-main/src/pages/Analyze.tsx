@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Sparkles, Loader2, BookOpen, ArrowRight, Lock, Video } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Sparkles, Loader2, BookOpen, ArrowRight, Lock, Video, Mic, MicOff } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from '../components/Router';
 import { useLanguage } from '../lib/i18n';
@@ -40,6 +40,10 @@ export default function Analyze() {
   const [trialExpired, setTrialExpired] = useState(false);
   const [isDeveloper, setIsDeveloper] = useState(false);
   const [trialUsed, setTrialUsed] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     // Wait for auth to finish loading before checking user
@@ -523,6 +527,87 @@ export default function Analyze() {
   const characterCount = dreamText.length;
   const maxCharacters = 5000;
 
+  // Voice recording with Whisper API
+  const toggleRecording = async () => {
+    // If already recording, stop and transcribe
+    if (isRecording && mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      return;
+    }
+
+    // Request microphone access
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop());
+        
+        // Create audio blob
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        console.log('Audio recorded, size:', audioBlob.size);
+        
+        if (audioBlob.size < 1000) {
+          showToast(language === 'tr' ? 'Ses kaydı çok kısa' : 'Recording too short', 'error');
+          return;
+        }
+
+        // Send to Whisper API
+        setIsTranscribing(true);
+        showToast(language === 'tr' ? 'Ses metne çevriliyor...' : 'Transcribing...', 'info');
+
+        try {
+          const formData = new FormData();
+          formData.append('audio', audioBlob, 'recording.webm');
+          formData.append('language', language);
+
+          const response = await fetch('https://soewlqmskqmpycaevhoc.supabase.co/functions/v1/whisper-transcribe', {
+            method: 'POST',
+            body: formData,
+          });
+
+          const result = await response.json();
+          
+          if (result.error) {
+            throw new Error(result.error);
+          }
+
+          if (result.text) {
+            setDreamText(prev => {
+              const newText = prev ? prev + ' ' + result.text : result.text;
+              return newText.trim().slice(0, maxCharacters);
+            });
+            showToast(language === 'tr' ? 'Ses metne çevrildi!' : 'Transcription complete!', 'success');
+          }
+        } catch (error) {
+          console.error('Transcription error:', error);
+          showToast(language === 'tr' ? 'Ses çevrilemedi' : 'Transcription failed', 'error');
+        } finally {
+          setIsTranscribing(false);
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      showToast(language === 'tr' ? 'Kayıt başladı... Bitince tekrar tıklayın' : 'Recording... Click again when done', 'info');
+      
+    } catch (error) {
+      console.error('Microphone access error:', error);
+      showToast(language === 'tr' ? 'Mikrofon erişimi reddedildi' : 'Microphone access denied', 'error');
+    }
+  };
+
   if (!user) return null;
 
   return (
@@ -894,6 +979,21 @@ export default function Analyze() {
                   <span className={`text-xs md:text-sm ${characterCount > maxCharacters * 0.9 ? 'text-pink-400' : 'text-slate-500'}`}>
                     {characterCount} / {maxCharacters} {t.analyze.characters}
                   </span>
+                  <button
+                    type="button"
+                    onClick={toggleRecording}
+                    disabled={(!isDeveloper && planType === null) || isTranscribing}
+                    className={`p-2 rounded-lg transition-all duration-300 ${
+                      isTranscribing
+                        ? 'bg-blue-500/20 border border-blue-500/50 text-blue-400 animate-pulse'
+                        : isRecording 
+                        ? 'bg-red-500/20 border border-red-500/50 text-red-400 animate-pulse' 
+                        : 'bg-purple-500/20 border border-purple-500/30 text-purple-400 hover:border-purple-500/50 hover:bg-purple-500/30'
+                    } ${(!isDeveloper && planType === null) || isTranscribing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title={isTranscribing ? (language === 'tr' ? 'Çevriliyor...' : 'Transcribing...') : isRecording ? (language === 'tr' ? 'Kaydı Durdur' : 'Stop Recording') : (language === 'tr' ? 'Sesli Giriş' : 'Voice Input')}
+                  >
+                    {isTranscribing ? <Loader2 size={18} className="animate-spin" /> : isRecording ? <MicOff size={18} /> : <Mic size={18} />}
+                  </button>
                 </div>
               </div>
 

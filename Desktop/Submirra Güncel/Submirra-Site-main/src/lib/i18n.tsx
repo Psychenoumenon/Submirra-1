@@ -849,7 +849,7 @@ const translations: Record<Language, Translations> = {
       startJourney: 'Start your journey into the subconscious',
       signIn: 'Sign In',
       signUp: 'Sign Up',
-      fullName: 'Full Name',
+      fullName: 'Your Name',
       email: 'Email',
       password: 'Password',
       orContinueWith: 'Or continue with',
