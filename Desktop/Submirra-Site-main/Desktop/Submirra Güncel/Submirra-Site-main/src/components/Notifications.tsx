@@ -452,13 +452,13 @@ export default function Notifications() {
                             <div className="flex-shrink-0 mt-0.5">
                               {getNotificationIcon(notification.type)}
                             </div>
-                            <div className="flex-1 min-w-0">
+                            <div className="flex-1 min-w-0 pr-6">
                               <p className="text-white text-xs leading-relaxed break-words break-all overflow-wrap-anywhere" style={{ wordBreak: 'break-word', overflowWrap: 'break-word', hyphens: 'auto' }}>
                                 {getNotificationText(notification)}
                               </p>
                             </div>
                             {!notification.read_at && (
-                              <div className="w-2 h-2 bg-pink-500 rounded-full flex-shrink-0 mt-0.5" />
+                              <div className="w-2 h-2 bg-pink-500 rounded-full flex-shrink-0 mt-0.5 mr-4" />
                             )}
                           </div>
                           <div className="flex items-center gap-2 pl-5">
