@@ -127,16 +127,16 @@ export default function Navigation() {
   }, [user]);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-950/90 backdrop-blur-xl border-b border-pink-500/20 shadow-lg shadow-pink-500/5">
-      <div className="max-w-7xl mx-auto px-4 py-2">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-950/90 backdrop-blur-xl border-b border-pink-500/20 shadow-lg shadow-pink-500/5" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+      <div className="max-w-7xl mx-auto px-4 py-2" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
         <div className="flex items-center gap-6">
           {/* Logo - En Sol */}
           <div className="flex items-center flex-shrink-0">
             <Logo />
           </div>
 
-          {/* Nav Items - Ortada */}
-          <div className="hidden lg:flex items-center gap-3 flex-1">
+          {/* Nav Items - Ortada (sm+ cihazlarda göster - 640px ve üstü) */}
+          <div className="hidden sm:flex items-center gap-3 flex-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentPage === item.path;
@@ -310,8 +310,8 @@ export default function Navigation() {
             })}
           </div>
 
-          {/* Sağ Menü - Pricing, Language, User */}
-          <div className="hidden lg:flex items-center gap-3 flex-shrink-0">
+          {/* Sağ Menü - Pricing, Language, User (sm+ cihazlarda göster - 640px ve üstü) */}
+          <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
             <button
               onClick={() => navigate('/pricing')}
               className={`px-4 py-2 rounded-lg bg-gradient-to-r from-pink-600 via-purple-600 via-pink-500 to-purple-600 text-white text-sm font-semibold hover:shadow-xl hover:shadow-pink-500/40 hover:scale-105 active:scale-95 transition-all duration-300 bg-[length:200%_auto] animate-gradient ${
@@ -382,7 +382,8 @@ export default function Navigation() {
             )}
           </div>
 
-          <div className="flex lg:hidden items-center gap-2">
+          {/* Mobil Menü (sadece küçük ekranlarda - <640px) */}
+          <div className="flex sm:hidden items-center gap-2">
             {user && (
               <>
                 <Notifications />
