@@ -16,6 +16,7 @@ export default function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<{avatar_url: string | null, full_name: string} | null>(null);
   const [isPremium, setIsPremium] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   const navItems = [
     { label: t.nav.home, path: '/' as const, icon: Home },
@@ -78,9 +79,50 @@ export default function Navigation() {
       };
       
       checkPremium();
+      
+      // Load unread messages count
+      const loadUnreadMessages = async () => {
+        try {
+          const { count, error } = await supabase
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('receiver_id', user.id)
+            .is('read_at', null);
+          
+          if (!error && count !== null) {
+            setUnreadMessages(count);
+          }
+        } catch (error) {
+          console.error('Error loading unread messages:', error);
+        }
+      };
+      
+      loadUnreadMessages();
+      
+      // Subscribe to new messages
+      const messagesSubscription = supabase
+        .channel('unread-messages-nav')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'messages',
+            filter: `receiver_id=eq.${user.id}`
+          },
+          () => {
+            loadUnreadMessages();
+          }
+        )
+        .subscribe();
+      
+      return () => {
+        messagesSubscription.unsubscribe();
+      };
     } else {
       setUserProfile(null);
       setIsPremium(false);
+      setUnreadMessages(0);
     }
   }, [user]);
 
@@ -290,6 +332,11 @@ export default function Navigation() {
                   title={t.nav.messages}
                 >
                   <MessageSquare size={20} />
+                  {unreadMessages > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-pink-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold px-1">
+                      {unreadMessages > 99 ? '99+' : unreadMessages}
+                    </span>
+                  )}
                 </button>
                 <button
                   onClick={() => navigate('/settings')}

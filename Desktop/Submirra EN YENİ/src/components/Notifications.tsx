@@ -447,21 +447,21 @@ export default function Notifications() {
                         onClick={() => handleNotificationClick(notification)}
                         className="w-full p-3 text-left hover:bg-slate-950/50 transition-colors"
                       >
-                        <div className="flex flex-col gap-1.5">
+                        <div className="flex flex-col gap-1.5 w-full">
                           <div className="flex gap-2.5 items-start">
-                            <div className="flex-shrink-0 mt-0.5">
+                            <div className="relative flex-shrink-0 mt-0.5">
                               {getNotificationIcon(notification.type)}
+                              {!notification.read_at && (
+                                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-pink-500 rounded-full border-2 border-slate-800" />
+                              )}
                             </div>
-                            <div className="flex-1 min-w-0 pr-6">
+                            <div className="flex-1 min-w-0 pr-8">
                               <p className="text-white text-xs leading-relaxed break-words break-all overflow-wrap-anywhere" style={{ wordBreak: 'break-word', overflowWrap: 'break-word', hyphens: 'auto' }}>
                                 {getNotificationText(notification)}
                               </p>
                             </div>
-                            {!notification.read_at && (
-                              <div className="w-2 h-2 bg-pink-500 rounded-full flex-shrink-0 mt-0.5 mr-4" />
-                            )}
                           </div>
-                          <div className="flex items-center gap-2 pl-5">
+                          <div className="flex items-center gap-2 pl-6">
                             <p className="text-slate-400 text-xs whitespace-nowrap">
                               {formatDate(notification.created_at)}
                             </p>
@@ -470,10 +470,10 @@ export default function Notifications() {
                       </button>
                       <button
                         onClick={(e) => deleteNotification(notification.id, e)}
-                        className="absolute top-2 right-2 p-1.5 text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                        className="absolute top-3 right-3 p-1 text-slate-600 hover:text-red-400 hover:bg-slate-700/50 rounded-full opacity-0 group-hover:opacity-100 transition-all"
                         title="Delete notification"
                       >
-                        <X size={14} />
+                        <X size={12} />
                       </button>
                     </div>
                   ))}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader2, Shield, Sparkles, Moon, Settings } from 'lucide-react';
+import { Loader2, Shield, Sparkles, Moon, Settings, Globe } from 'lucide-react';
 import { useLanguage } from '../lib/i18n';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -9,7 +9,7 @@ interface MaintenanceProps {
 }
 
 export default function Maintenance({ message }: MaintenanceProps) {
-  const { language } = useLanguage();
+  const { language, setLanguage } = useLanguage();
   const { user } = useAuth();
   const [isDeveloper, setIsDeveloper] = useState(false);
   const [isEnding, setIsEnding] = useState(false);
@@ -96,6 +96,17 @@ export default function Maintenance({ message }: MaintenanceProps) {
         {/* Glass Card */}
         <div className="bg-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-3xl p-8 md:p-12 shadow-2xl shadow-purple-500/10">
           
+          {/* Language Switcher */}
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={() => setLanguage(language === 'tr' ? 'en' : 'tr')}
+              className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600/30 rounded-full text-slate-400 hover:text-white transition-all text-sm"
+            >
+              <Globe className="w-4 h-4" />
+              <span>{language === 'tr' ? 'EN' : 'TR'}</span>
+            </button>
+          </div>
+
           {/* Logo */}
           <div className="flex justify-center mb-8">
             <div className="relative">

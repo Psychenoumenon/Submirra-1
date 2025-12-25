@@ -928,17 +928,22 @@ export default function Messages() {
                       {conv.is_online && conv.show_online_status !== false && (
                         <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-slate-900 rounded-full"></div>
                       )}
+                      {conv.unread_count > 0 && (
+                        <div className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-pink-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold px-1 border-2 border-slate-900">
+                          {conv.unread_count > 99 ? '99+' : conv.unread_count}
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1 text-left min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <p className="text-white font-medium truncate">{conv.full_name}</p>
+                        <p className={`font-medium truncate ${conv.unread_count > 0 ? 'text-white' : 'text-white'}`}>{conv.full_name}</p>
                         {conv.last_message_time && (
-                          <span className="text-xs text-slate-400 ml-2 flex-shrink-0">
+                          <span className={`text-xs ml-2 flex-shrink-0 ${conv.unread_count > 0 ? 'text-pink-400 font-medium' : 'text-slate-400'}`}>
                             {formatTime(conv.last_message_time)}
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-slate-400 truncate">
+                      <p className={`text-sm truncate ${conv.unread_count > 0 ? 'text-slate-300 font-medium' : 'text-slate-400'}`}>
                         {conv.last_message || (language === 'tr' ? 'Mesaj yok' : 'No messages')}
                       </p>
                     </div>
