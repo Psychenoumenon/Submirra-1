@@ -382,38 +382,68 @@ export default function Navigation() {
             )}
           </div>
 
-          {/* Mobil Menü (sadece küçük ekranlarda - <640px) */}
-          <div className="flex sm:hidden items-center gap-2">
-            {user && (
+          {/* Mobil Sağ Kenar Çubuğu (sadece küçük ekranlarda - <640px) */}
+          <div className="flex sm:hidden items-center gap-1 ml-auto">
+            {user ? (
               <>
                 <Notifications />
                 <button
                   onClick={() => navigate('/messages')}
-                  className="relative p-2 text-slate-400 hover:text-purple-400 transition-colors"
+                  className="relative p-1.5 text-slate-400 hover:text-purple-400 transition-colors"
                   title={t.nav.messages}
                 >
-                  <MessageSquare size={20} />
+                  <MessageSquare size={18} />
                   {unreadMessages > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] bg-pink-500 rounded-full text-white text-[9px] flex items-center justify-center font-bold px-0.5">
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] bg-pink-500 rounded-full text-white text-[8px] flex items-center justify-center font-bold">
                       {unreadMessages > 99 ? '99+' : unreadMessages}
                     </span>
                   )}
                 </button>
+                <button
+                  onClick={() => navigate('/settings')}
+                  className="p-1.5 text-slate-400 hover:text-purple-400 transition-colors"
+                  title={t.nav.settings || 'Settings'}
+                >
+                  <Settings size={18} />
+                </button>
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="p-1 rounded-full"
+                  title={userProfile?.full_name || 'Profile'}
+                >
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 flex items-center justify-center overflow-hidden">
+                    {userProfile?.avatar_url ? (
+                      <img
+                        src={userProfile.avatar_url}
+                        alt="Profile"
+                        className="w-full h-full object-cover rounded-full"
+                      />
+                    ) : (
+                      <User className="text-pink-400" size={14} />
+                    )}
+                  </div>
+                </button>
               </>
+            ) : (
+              <button
+                onClick={() => navigate('/signin')}
+                className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 text-white text-sm font-medium"
+              >
+                {t.nav.signIn}
+              </button>
             )}
-            <LanguageSwitcher />
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="text-slate-300 hover:text-pink-400 transition-colors p-2"
+              className="text-slate-300 hover:text-pink-400 transition-colors p-1.5"
               aria-label="Toggle menu"
             >
-              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
           </div>
         </div>
 
         {isMobileMenuOpen && (
-          <div className="lg:hidden mt-4 pb-4 border-t border-pink-500/20 pt-4 animate-slide-down">
+          <div className="sm:hidden mt-4 pb-4 border-t border-pink-500/20 pt-4 animate-slide-down">
             <div className="flex flex-col gap-3">
               {navItems.map((item, index) => (
                 <button
@@ -535,6 +565,11 @@ export default function Navigation() {
                   {t.nav.signIn}
                 </button>
               )}
+              
+              {/* Language Switcher - Mobil menüde */}
+              <div className="pt-3 mt-3 border-t border-pink-500/20">
+                <LanguageSwitcher />
+              </div>
             </div>
           </div>
         )}
