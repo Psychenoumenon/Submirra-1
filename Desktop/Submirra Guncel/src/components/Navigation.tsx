@@ -5,7 +5,7 @@ import Notifications from './Notifications';
 import { useNavigate, useCurrentPage } from './Router';
 import { useAuth } from '../lib/AuthContext';
 import { useLanguage } from '../lib/i18n';
-import { Menu, X, MessageSquare, User, Sparkles, Lock, LogOut, Settings, Home, Info, Users, BookOpen, Mail, Brain } from 'lucide-react';
+import { Menu, X, MessageSquare, User, Sparkles, Lock, LogOut, Settings, Home, Info, Users, BookOpen, Mail, Brain, Crown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export default function Navigation() {
@@ -18,6 +18,7 @@ export default function Navigation() {
   const [isPremium, setIsPremium] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
 
+  // Desktop navbar items (full navigation)
   const navItems = [
     { label: t.nav.home, path: '/' as const, icon: Home },
     { label: t.nav.about, path: '/about' as const, icon: Info },
@@ -25,6 +26,15 @@ export default function Navigation() {
     { label: t.nav.analyze, path: '/analyze' as const, icon: Brain },
     { label: t.nav.library, path: '/library' as const, icon: BookOpen },
   ];
+
+  // Mobile sidebar items (Analyze is in center of bottom nav, Settings moved after Contact)
+  const mobileNavItems = [
+    { label: t.nav.home, path: '/' as const, icon: Home },
+    { label: t.nav.about, path: '/about' as const, icon: Info },
+  ];
+
+  // Settings item for mobile (after Contact)
+  const mobileSettingsItem = { label: t.nav.settings, path: '/settings' as const, icon: Settings };
 
   const userNavItems = [
     { label: t.nav.contact, path: '/contact' as const, icon: Mail },
@@ -34,7 +44,7 @@ export default function Navigation() {
     { label: t.nav.generator, path: '/generator' as const, icon: Sparkles },
   ];
 
-  const handleNavClick = (path: typeof navItems[number]['path'] | typeof userNavItems[number]['path'] | typeof premiumNavItems[number]['path']) => {
+  const handleNavClick = (path: typeof navItems[number]['path'] | typeof userNavItems[number]['path'] | typeof premiumNavItems[number]['path'] | typeof mobileNavItems[number]['path'] | typeof mobileSettingsItem['path']) => {
     navigate(path);
     setIsMobileMenuOpen(false);
   };
@@ -420,20 +430,28 @@ export default function Navigation() {
           {/* Slide Panel - Soldan çıkar */}
           <div className="sm:hidden fixed top-14 left-0 w-72 h-[calc(100vh-56px)] bg-slate-950/95 backdrop-blur-xl border-r border-pink-500/20 z-50 animate-slide-in-left overflow-y-auto pb-20">
             <div className="flex flex-col gap-3 p-4">
-              {navItems.map((item, index) => (
+              {mobileNavItems.map((item, index) => (
                 <button
                   key={item.path}
                   onClick={() => handleNavClick(item.path)}
-                  className={`text-left px-4 py-2 rounded-lg font-medium transition-all duration-200 animate-fade-in ${
+                  className={`flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-all duration-200 animate-fade-in ${
                     currentPage === item.path
                       ? 'bg-pink-500/10 text-pink-400'
                       : 'text-slate-300 hover:bg-slate-800/50 hover:text-pink-400'
                   }`}
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
+                  <item.icon size={18} />
                   {item.label}
                 </button>
               ))}
+
+              {/* Notifications - Sidebar için özel */}
+              {user && (
+                <div className="animate-fade-in" style={{ animationDelay: `${mobileNavItems.length * 0.05}s` }}>
+                  <Notifications variant="sidebar" />
+                </div>
+              )}
 
               {/* Generator - Mobile (Everyone can see, locked if not premium) */}
               {user && premiumNavItems.map((item, index) => (
@@ -457,27 +475,43 @@ export default function Navigation() {
                 <button
                   key={item.path}
                   onClick={() => handleNavClick(item.path)}
-                  className={`text-left px-4 py-2 rounded-lg font-medium transition-all duration-200 animate-fade-in ${
+                  className={`flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-all duration-200 animate-fade-in ${
                     currentPage === item.path
                       ? 'bg-pink-500/10 text-pink-400'
                       : 'text-slate-300 hover:bg-slate-800/50 hover:text-pink-400'
                   }`}
                   style={{ animationDelay: `${(navItems.length + (isPremium ? premiumNavItems.length : 0) + index) * 0.05}s` }}
                 >
+                  <item.icon size={18} />
                   {item.label}
                 </button>
               ))}
+
+              {/* Settings - Contact'ın altında */}
+              <button
+                onClick={() => handleNavClick(mobileSettingsItem.path)}
+                className={`flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-all duration-200 animate-fade-in ${
+                  currentPage === mobileSettingsItem.path
+                    ? 'bg-pink-500/10 text-pink-400'
+                    : 'text-slate-300 hover:bg-slate-800/50 hover:text-pink-400'
+                }`}
+                style={{ animationDelay: `${(navItems.length + (isPremium ? premiumNavItems.length : 0) + userNavItems.length) * 0.05}s` }}
+              >
+                <mobileSettingsItem.icon size={18} />
+                {mobileSettingsItem.label}
+              </button>
 
               <button
                 onClick={() => {
                   navigate('/pricing');
                   setIsMobileMenuOpen(false);
                 }}
-                className={`text-left px-4 py-2 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 text-white font-medium hover:from-pink-500 hover:to-purple-500 transition-all duration-200 animate-fade-in ${
+                className={`flex items-center gap-3 px-4 py-2 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 text-white font-medium hover:from-pink-500 hover:to-purple-500 transition-all duration-200 animate-fade-in ${
                   currentPage === '/pricing' ? 'ring-2 ring-pink-400' : ''
                 }`}
                 style={{ animationDelay: `${(navItems.length + userNavItems.length) * 0.05}s` }}
               >
+                <Crown size={18} />
                 {t.nav.buy}
               </button>
 
@@ -525,11 +559,15 @@ export default function Navigation() {
     {/* Mobil Bottom Navigation Bar - NAV DIŞINDA, Sabit Alt Kısım */}
     {user && (
       <div className="sm:hidden fixed bottom-0 left-0 right-0 z-[60] bg-slate-950/95 backdrop-blur-xl border-t border-pink-500/20 shadow-lg shadow-pink-500/10" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="grid grid-cols-4 gap-0 px-1 py-2">
-          {/* Notifications */}
-          <div className="flex justify-center">
-            <Notifications />
-          </div>
+        <div className="grid grid-cols-5 gap-0 px-1 py-2 relative">
+          {/* Social */}
+          <button
+            onClick={() => navigate('/social')}
+            className={`flex justify-center p-3 transition-colors ${currentPage === '/social' ? 'text-pink-400' : 'text-slate-400 hover:text-pink-300'}`}
+            title={t.nav.social}
+          >
+            <Users size={22} />
+          </button>
 
           {/* Messages */}
           <button
@@ -545,13 +583,32 @@ export default function Navigation() {
             )}
           </button>
 
-          {/* Settings */}
+          {/* Analyze - Center Floating Button */}
+          <div className="flex justify-center">
+            <button
+              onClick={() => navigate('/analyze')}
+              className={`absolute -top-6 left-1/2 -translate-x-1/2 w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg ${
+                currentPage === '/analyze'
+                  ? 'bg-gradient-to-br from-pink-500 via-purple-500 to-cyan-500 shadow-purple-500/50 scale-110'
+                  : 'bg-gradient-to-br from-pink-600 via-purple-600 to-cyan-600 hover:from-pink-500 hover:via-purple-500 hover:to-cyan-500 shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105'
+              }`}
+              title={t.nav.analyze}
+              style={{
+                animation: currentPage !== '/analyze' ? 'pulse-glow 2s ease-in-out infinite' : 'none'
+              }}
+            >
+              <div className={`absolute inset-0 rounded-full bg-gradient-to-br from-pink-400 via-purple-400 to-cyan-400 opacity-0 ${currentPage !== '/analyze' ? 'animate-ping' : ''}`} style={{ animationDuration: '2s' }} />
+              <Brain size={26} className="text-white relative z-10" />
+            </button>
+          </div>
+
+          {/* Library */}
           <button
-            onClick={() => navigate('/settings')}
-            className={`flex justify-center p-3 transition-colors ${currentPage === '/settings' ? 'text-pink-400' : 'text-slate-400 hover:text-pink-300'}`}
-            title={t.nav.settings}
+            onClick={() => navigate('/library')}
+            className={`flex justify-center p-3 transition-colors ${currentPage === '/library' ? 'text-pink-400' : 'text-slate-400 hover:text-pink-300'}`}
+            title={t.nav.library}
           >
-            <Settings size={22} />
+            <BookOpen size={22} />
           </button>
 
           {/* Profile */}

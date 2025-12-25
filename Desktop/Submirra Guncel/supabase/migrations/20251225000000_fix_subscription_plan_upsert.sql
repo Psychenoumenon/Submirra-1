@@ -33,7 +33,7 @@ BEGIN
     p_plan_type,
     CASE 
       WHEN p_plan_type = 'free' THEN NULL  -- Free plan: unlimited basic analyses
-      WHEN p_plan_type = 'trial' THEN 7
+      WHEN p_plan_type = 'trial' THEN NULL  -- Trial: unlimited advanced analyses for 7 days
       WHEN p_plan_type = 'standard' THEN 3
       WHEN p_plan_type = 'premium' THEN 5
     END,
@@ -75,7 +75,7 @@ BEGIN
     plan_type = p_plan_type,
     daily_analysis_limit = CASE 
       WHEN p_plan_type = 'free' THEN NULL
-      WHEN p_plan_type = 'trial' THEN 7
+      WHEN p_plan_type = 'trial' THEN NULL  -- Trial: unlimited advanced analyses for 7 days
       WHEN p_plan_type = 'standard' THEN 3
       WHEN p_plan_type = 'premium' THEN 5
     END,
@@ -95,14 +95,18 @@ BEGIN
       WHEN p_plan_type = 'trial' THEN 'trial'
       ELSE 'active'
     END,
-    -- Only update trial dates if switching TO trial (not FROM trial)
+    -- Update trial dates when switching TO trial (including manual re-assignment)
     trial_start_date = CASE 
-      WHEN p_plan_type = 'trial' AND subscriptions.plan_type != 'trial' THEN now()
+      WHEN p_plan_type = 'trial' THEN now()
       ELSE subscriptions.trial_start_date
     END,
     trial_end_date = CASE 
-      WHEN p_plan_type = 'trial' AND subscriptions.plan_type != 'trial' THEN now() + interval '7 days'
+      WHEN p_plan_type = 'trial' THEN now() + interval '7 days'
       ELSE subscriptions.trial_end_date
+    END,
+    trial_visual_analyses_used = CASE
+      WHEN p_plan_type = 'trial' THEN 0  -- Reset counter when trial is (re)assigned
+      ELSE subscriptions.trial_visual_analyses_used
     END,
     subscription_start_date = CASE 
       WHEN p_plan_type IN ('standard', 'premium') THEN now()

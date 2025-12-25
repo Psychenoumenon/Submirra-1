@@ -52,6 +52,21 @@ export default {
           'gold-glow': '0 0 20px rgba(212, 175, 55, 0.5), 0 0 40px rgba(212, 175, 55, 0.3)',
           'purple-glow': '0 0 30px rgba(109, 40, 217, 0.4), 0 0 60px rgba(109, 40, 217, 0.2)',
         },
+        keyframes: {
+          'pulse-glow': {
+            '0%, 100%': { 
+              boxShadow: '0 0 20px rgba(168, 85, 247, 0.4), 0 0 40px rgba(236, 72, 153, 0.2)',
+              transform: 'scale(1)'
+            },
+            '50%': { 
+              boxShadow: '0 0 30px rgba(168, 85, 247, 0.6), 0 0 60px rgba(236, 72, 153, 0.4)',
+              transform: 'scale(1.05)'
+            },
+          },
+        },
+        animation: {
+          'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
+        },
       },
     },
     plugins: [],

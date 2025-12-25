@@ -740,13 +740,8 @@ export default function Analyze() {
                         : 'border-purple-500/30 bg-slate-950/30 hover:border-purple-500/50'
                     }`}
                   >
-                    {!isDeveloper && (planType === null || planType === 'free' || (planType === 'trial' && trialExpired)) && (
-                      <div className="absolute top-2 right-2">
-                        <span className="px-2 py-0.5 bg-slate-700 text-slate-300 text-[10px] font-semibold rounded">🔒</span>
-                      </div>
-                    )}
                     <div className="flex items-center gap-2 mb-2">
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                         textAnalysisType === 'advanced' ? 'border-pink-400 bg-pink-400' : 'border-slate-400'
                       }`}>
                         {textAnalysisType === 'advanced' && <div className="w-2 h-2 rounded-full bg-white"></div>}
@@ -754,6 +749,9 @@ export default function Analyze() {
                       <span className={`font-semibold ${textAnalysisType === 'advanced' ? 'text-pink-400' : 'text-slate-300'}`}>
                         {t.analyze.analysisTypeAdvanced}
                       </span>
+                      {!isDeveloper && (planType === null || planType === 'free' || (planType === 'trial' && trialExpired)) && (
+                        <span className="ml-auto px-2 py-0.5 bg-slate-700 text-slate-300 text-[10px] font-semibold rounded flex-shrink-0">🔒</span>
+                      )}
                     </div>
                     <p className="text-xs text-slate-400">{t.analyze.analysisTypeAdvancedDesc}</p>
                   </button>

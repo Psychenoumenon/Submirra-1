@@ -165,14 +165,20 @@ export default function Pricing() {
 
             <button
               onClick={() => handleSubscribe('free')}
-              disabled={isProcessing === 'free'}
-              className="w-full px-4 py-2.5 rounded-lg bg-slate-700 text-white text-sm font-semibold hover:bg-slate-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              disabled={isProcessing === 'free' || currentPlan === 'free'}
+              className={`w-full px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+                currentPlan === 'free'
+                  ? 'bg-slate-700/50 text-slate-400 cursor-not-allowed opacity-50'
+                  : 'bg-slate-700 text-white hover:bg-slate-600'
+              }`}
             >
               {isProcessing === 'free' ? (
                 <>
                   <Loader2 className="animate-spin" size={16} />
                   Processing...
                 </>
+              ) : currentPlan === 'free' ? (
+                language === 'tr' ? 'Mevcut Planınız' : 'Current Plan'
               ) : (
                 t.pricing.freePlan.cta
               )}

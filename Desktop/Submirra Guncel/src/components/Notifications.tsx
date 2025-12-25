@@ -6,6 +6,10 @@ import { supabase } from '../lib/supabase';
 import { useToast } from '../lib/ToastContext';
 import { useLanguage } from '../lib/i18n';
 
+interface NotificationsProps {
+  variant?: 'default' | 'sidebar';
+}
+
 interface Notification {
   id: string;
   type: 'like' | 'comment' | 'follow' | 'dream_completed' | 'trial_expired';
@@ -32,7 +36,7 @@ interface FollowRequest {
   };
 }
 
-export default function Notifications() {
+export default function Notifications({ variant = 'default' }: NotificationsProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -470,25 +474,45 @@ export default function Notifications() {
 
   return (
     <div className="relative">
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsOpen(!isOpen);
-        }}
-        className="relative p-3 text-slate-400 hover:text-purple-400 transition-colors flex items-center justify-center"
-      >
-        <Bell size={22} />
-        {followRequests.length > 0 && (
-          <span className="absolute top-1 left-1 min-w-[16px] h-4 px-1 bg-blue-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold shadow-lg border border-slate-900">
-            {followRequests.length > 9 ? '9+' : followRequests.length}
-          </span>
-        )}
-        {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-pink-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold shadow-lg border border-slate-900">
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
-        )}
-      </button>
+      {variant === 'sidebar' ? (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen(!isOpen);
+          }}
+          className="w-full flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-all duration-200 text-slate-300 hover:bg-slate-800/50 hover:text-purple-400"
+        >
+          <div className="relative">
+            <Bell size={18} />
+            {(followRequests.length > 0 || unreadCount > 0) && (
+              <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] bg-pink-500 rounded-full text-white text-[8px] flex items-center justify-center font-bold">
+                {(followRequests.length + unreadCount) > 9 ? '9+' : followRequests.length + unreadCount}
+              </span>
+            )}
+          </div>
+          <span>{t.notifications.title}</span>
+        </button>
+      ) : (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen(!isOpen);
+          }}
+          className="relative p-3 text-slate-400 hover:text-purple-400 transition-colors flex items-center justify-center"
+        >
+          <Bell size={22} />
+          {followRequests.length > 0 && (
+            <span className="absolute top-1 left-1 min-w-[16px] h-4 px-1 bg-blue-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold shadow-lg border border-slate-900">
+              {followRequests.length > 9 ? '9+' : followRequests.length}
+            </span>
+          )}
+          {unreadCount > 0 && (
+            <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-pink-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold shadow-lg border border-slate-900">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </button>
+      )}
 
       {isOpen && (
         <>
@@ -496,7 +520,11 @@ export default function Notifications() {
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="fixed sm:absolute inset-x-2 sm:inset-x-auto sm:right-0 bottom-16 sm:bottom-auto sm:top-12 sm:w-[400px] md:w-[500px] lg:w-[600px] max-h-[60vh] sm:max-h-[80vh] md:max-h-[700px] bg-slate-900 border border-purple-500/30 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col">
+          <div className={`fixed bg-slate-900 border border-purple-500/30 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col ${
+            variant === 'sidebar' 
+              ? 'left-4 right-4 top-20 bottom-20 max-h-[70vh]' 
+              : 'inset-x-2 sm:inset-x-auto sm:right-0 bottom-16 sm:bottom-auto sm:top-12 sm:w-[400px] md:w-[500px] lg:w-[600px] max-h-[60vh] sm:max-h-[80vh] md:max-h-[700px]'
+          }`}>
             <div className="p-4 border-b border-purple-500/20">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-xl font-semibold text-white">{t.notifications.title}</h3>

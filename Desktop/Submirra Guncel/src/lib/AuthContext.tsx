@@ -213,6 +213,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log('💾 Saving IP to profile...');
           await saveUserIP(data.user.id, userIP);
         }
+
+        // Automatically assign free plan to new users
+        console.log('🎁 Assigning free plan to new user...');
+        try {
+          const { error: planError } = await supabase.rpc('update_subscription_plan', {
+            p_user_id: data.user.id,
+            p_plan_type: 'free'
+          });
+
+          if (planError) {
+            console.error('Error assigning free plan:', planError);
+            // Don't fail signup if plan assignment fails - user can still use the app
+          } else {
+            console.log('✅ Free plan assigned successfully');
+          }
+        } catch (planError) {
+          console.error('Exception assigning free plan:', planError);
+          // Don't fail signup if plan assignment fails
+        }
       }
 
       // If no session but user exists, it might be email confirmation
