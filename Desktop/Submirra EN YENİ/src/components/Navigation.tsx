@@ -382,7 +382,24 @@ export default function Navigation() {
             )}
           </div>
 
-          <div className="flex lg:hidden items-center gap-3">
+          <div className="flex lg:hidden items-center gap-2">
+            {user && (
+              <>
+                <Notifications />
+                <button
+                  onClick={() => navigate('/messages')}
+                  className="relative p-2 text-slate-400 hover:text-purple-400 transition-colors"
+                  title={t.nav.messages}
+                >
+                  <MessageSquare size={20} />
+                  {unreadMessages > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] bg-pink-500 rounded-full text-white text-[9px] flex items-center justify-center font-bold px-0.5">
+                      {unreadMessages > 99 ? '99+' : unreadMessages}
+                    </span>
+                  )}
+                </button>
+              </>
+            )}
             <LanguageSwitcher />
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -497,7 +514,7 @@ export default function Navigation() {
                       setIsMobileMenuOpen(false);
                     }}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-pink-600/20 to-purple-600/20 border border-pink-500/30 text-pink-300 hover:border-pink-400/50 hover:text-pink-200 transition-all duration-200 animate-fade-in"
-                    style={{ animationDelay: `${(navItems.length + userNavItems.length + 2) * 0.05}s` }}
+                    style={{ animationDelay: `${(navItems.length + userNavItems.length + 3) * 0.05}s` }}
                   >
                     <LogOut size={16} />
                     {t.nav.signOut}

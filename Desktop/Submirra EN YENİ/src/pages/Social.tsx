@@ -581,15 +581,24 @@ export default function Social() {
     try {
       setSearchingUsers(true);
       
-      // Get blocked users first
+      // Get blocked users first (both directions - users I blocked AND users who blocked me)
       let blockedUserIds: string[] = [];
       if (user) {
-        const { data: blockedData } = await supabase
+        // Users I blocked
+        const { data: blockedByMe } = await supabase
           .from('user_blocks')
           .select('blocked_id')
           .eq('blocker_id', user.id);
         
-        blockedUserIds = (blockedData || []).map(block => block.blocked_id);
+        // Users who blocked me
+        const { data: blockedMe } = await supabase
+          .from('user_blocks')
+          .select('blocker_id')
+          .eq('blocked_id', user.id);
+        
+        const blockedByMeIds = (blockedByMe || []).map(block => block.blocked_id);
+        const blockedMeIds = (blockedMe || []).map(block => block.blocker_id);
+        blockedUserIds = [...blockedByMeIds, ...blockedMeIds];
       }
 
       const { data, error } = await supabase
@@ -1707,9 +1716,9 @@ export default function Social() {
                     );
                   })()}
                   
-                  {/* Overlay on hover */}
+                  {/* Overlay on hover - Desktop only */}
                   <div 
-                    className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none"
+                    className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none hidden md:flex"
                   >
                     <div className="flex items-center gap-6 text-white pointer-events-none">
                       <div className="flex items-center gap-2">
@@ -1963,7 +1972,7 @@ export default function Social() {
           onClick={() => setSelectedDream(null)}
         >
           <div
-            className="bg-slate-900 border border-purple-500/30 rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+            className="bg-slate-900 border border-purple-500/30 rounded-xl sm:rounded-2xl w-full max-w-5xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col mx-2 sm:mx-0"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -1998,17 +2007,14 @@ export default function Social() {
               </div>
             </div>
 
-            {/* Layout: Image Left (if has images), Content Right */}
-            <div className={`flex flex-1 overflow-hidden ${(() => {
-              const images = getDreamImages(selectedDream);
-              return images.length === 0 ? '' : '';
-            })()}`}>
-              {/* Dream Image - Left Side (only for analyses with images) */}
+            {/* Layout: Image Top on Mobile, Left on Desktop */}
+            <div className={`flex flex-col md:flex-row flex-1 overflow-hidden`}>
+              {/* Dream Image - Top on Mobile, Left on Desktop */}
               {(() => {
                 const images = getDreamImages(selectedDream);
                 return images.length > 0;
               })() && (
-                <div className="w-1/2 flex-shrink-0 bg-slate-950 overflow-hidden relative">
+                <div className="w-full md:w-1/2 h-48 sm:h-64 md:h-auto flex-shrink-0 bg-slate-950 overflow-hidden relative">
                   {(() => {
                     const images = getDreamImages(selectedDream);
                     if (images.length === 0) {
@@ -2084,9 +2090,9 @@ export default function Social() {
                 </div>
               )}
 
-              {/* Content Right Side (or Full Width for basic analysis) */}
-              <div className={`flex flex-col overflow-y-auto ${(selectedDream.analysis_type === 'basic' || selectedDream.analysis_type === 'advanced') ? 'w-full' : 'flex-1'}`}>
-                <div className="p-6">
+              {/* Content - Bottom on Mobile, Right on Desktop */}
+              <div className={`flex flex-col overflow-y-auto flex-1 ${(selectedDream.analysis_type === 'basic' || selectedDream.analysis_type === 'advanced') ? 'w-full' : 'md:flex-1'}`}>
+                <div className="p-4 sm:p-6">
                   {/* Dream Text */}
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold text-purple-400 mb-2">{t.library.yourDream}</h3>
@@ -2112,37 +2118,32 @@ export default function Social() {
                   
                   {/* Comment Input */}
                   {user ? (
-                    <div className="mb-6 flex gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 flex items-center justify-center overflow-hidden flex-shrink-0">
-                        <User className="text-pink-400" size={16} />
-                      </div>
-                      <div className="flex-1 flex items-center gap-2">
-                        <EmojiPicker 
-                          onEmojiSelect={(emoji) => setNewComment(prev => prev + emoji)}
-                          position="top"
-                          inputRef={commentInputRef}
-                        />
-                        <input
-                          ref={commentInputRef}
-                          type="text"
-                          value={newComment}
-                          onChange={(e) => setNewComment(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleComment()}
-                          placeholder={t.social.writeComment}
-                          className="flex-1 px-4 py-2 bg-slate-950/50 border border-purple-500/30 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60"
-                        />
-                        <button
-                          onClick={handleComment}
-                          disabled={!newComment.trim() || submittingComment}
-                          className="px-4 py-2 bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-lg hover:from-pink-500 hover:to-purple-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {submittingComment ? (
-                            <Loader2 className="animate-spin" size={18} />
-                          ) : (
-                            <Send size={18} />
-                          )}
-                        </button>
-                      </div>
+                    <div className="mb-6 flex items-center gap-2">
+                      <EmojiPicker 
+                        onEmojiSelect={(emoji) => setNewComment(prev => prev + emoji)}
+                        position="top"
+                        inputRef={commentInputRef}
+                      />
+                      <input
+                        ref={commentInputRef}
+                        type="text"
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleComment()}
+                        placeholder={t.social.writeComment}
+                        className="flex-1 px-3 sm:px-4 py-2 bg-slate-950/50 border border-purple-500/30 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60 text-sm sm:text-base"
+                      />
+                      <button
+                        onClick={handleComment}
+                        disabled={!newComment.trim() || submittingComment}
+                        className="p-2 sm:px-4 sm:py-2 bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-lg hover:from-pink-500 hover:to-purple-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {submittingComment ? (
+                          <Loader2 className="animate-spin" size={18} />
+                        ) : (
+                          <Send size={18} />
+                        )}
+                      </button>
                     </div>
                   ) : (
                     <div className="mb-6 p-4 bg-slate-950/30 rounded-lg text-center">
@@ -2196,7 +2197,7 @@ export default function Social() {
                               {user && comment.user_id === user.id && (
                                 <button
                                   onClick={() => handleDeleteComment(comment.id)}
-                                  className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-500 hover:text-red-400"
+                                  className="ml-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-1 text-slate-500 hover:text-red-400"
                                   title={t.social.deleteComment}
                                 >
                                   <X size={14} />

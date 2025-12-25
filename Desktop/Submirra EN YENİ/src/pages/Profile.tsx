@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, Mail, Calendar, Edit2, Save, X, Upload, Loader2, Users, Heart, MessageCircle, BookOpen, UserPlus, UserCheck, Grid3x3, Sparkles, MoreVertical, Star, StarOff, Flag, Zap, Ban } from 'lucide-react';
+import { User, Mail, Calendar, Edit2, Save, X, Upload, Loader2, Users, Heart, MessageCircle, BookOpen, UserPlus, UserCheck, Grid3x3, Sparkles, MoreVertical, Star, StarOff, Flag, Zap, Ban, Lock } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate, useCurrentPage } from '../components/Router';
 import { useLanguage } from '../lib/i18n';
@@ -73,6 +73,8 @@ export default function Profile() {
   const [isBlocked, setIsBlocked] = useState(false);
   const [isBlockedBy, setIsBlockedBy] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [isProfilePrivate, setIsProfilePrivate] = useState(false);
+  const [hasPendingRequest, setHasPendingRequest] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [reportCount, setReportCount] = useState<number>(0);
   const [dangerLevel, setDangerLevel] = useState<'low' | 'medium' | 'high' | 'critical'>('low');
@@ -112,6 +114,33 @@ export default function Profile() {
       clearInterval(interval);
     };
   }, [locationPath]);
+
+  // Subscribe to dream deletions for real-time updates
+  useEffect(() => {
+    if (!profileUserId) return;
+
+    const channel = supabase
+      .channel('profile-dreams-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'dreams',
+          filter: `user_id=eq.${profileUserId}`
+        },
+        (payload) => {
+          console.log('Dream deleted:', payload);
+          // Remove deleted dream from local state
+          setPublicDreams(prev => prev.filter(dream => dream.id !== payload.old.id));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profileUserId]);
 
   useEffect(() => {
     const loadProfileData = async () => {
@@ -153,6 +182,20 @@ export default function Profile() {
               checkReportStatus(userId),
             ] : []),
           ]);
+
+          // Check if blocked by the user - redirect if true
+          const { data: blockedByCheck } = await supabase
+            .from('user_blocks')
+            .select('id')
+            .eq('blocker_id', userId)
+            .eq('blocked_id', user?.id)
+            .single();
+
+          if (blockedByCheck) {
+            showToast(language === 'tr' ? 'Bu profil size kapalı' : 'This profile is not accessible', 'error');
+            navigate('/');
+            return;
+          }
           
           // Load report info in background (non-critical, only for admins)
           loadReportInfo(userId).catch(err => console.error('Report info load error:', err));
@@ -257,7 +300,7 @@ export default function Profile() {
     try {
       setLoading(true);
       // Only select necessary columns
-      let query = supabase.from('profiles').select('id, full_name, avatar_url, bio, username, created_at, is_developer');
+      let query = supabase.from('profiles').select('id, full_name, avatar_url, bio, username, created_at, is_developer, is_public');
       
       // Check if it's a UUID (user ID) or username
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userIdOrUsername);
@@ -299,6 +342,9 @@ export default function Profile() {
         is_developer: data.is_developer || false,
         plan_type: planType,
       });
+      
+      // Check if profile is private
+      setIsProfilePrivate(data.is_public === false);
       
       // Set the actual user ID for other operations
       setProfileUserId(data.id);
@@ -414,7 +460,7 @@ export default function Profile() {
         .select('id, image_url, image_url_2, image_url_3, analysis_type, created_at, status, likes_count, dream_text, dream_text_tr, dream_text_en, analysis_text, analysis_text_tr, analysis_text_en')
         .eq('user_id', userId)
         .eq('is_public', true)
-        .in('status', ['completed', 'pending'])
+        .eq('status', 'completed')
         .order('created_at', { ascending: false })
         .limit(12);
 
@@ -496,16 +542,40 @@ export default function Profile() {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      // Check if already following
+      const { data: followData } = await supabase
         .from('follows')
         .select('id')
         .eq('follower_id', user.id)
         .eq('following_id', userId)
         .single();
 
-      setIsFollowing(!!data && !error);
+      if (followData) {
+        setIsFollowing(true);
+        setHasPendingRequest(false);
+        return;
+      }
+
+      // Check for pending follow request
+      try {
+        const { data: requestData } = await supabase
+          .from('follow_requests')
+          .select('id')
+          .eq('requester_id', user.id)
+          .eq('target_id', userId)
+          .eq('status', 'pending')
+          .maybeSingle();
+
+        setIsFollowing(false);
+        setHasPendingRequest(!!requestData);
+      } catch {
+        // Table might not exist yet, ignore error
+        setIsFollowing(false);
+        setHasPendingRequest(false);
+      }
     } catch (error) {
       setIsFollowing(false);
+      setHasPendingRequest(false);
     }
   };
 
@@ -669,18 +739,44 @@ export default function Profile() {
     }
 
     try {
-      const { error } = await supabase
+      // Block the user
+      const { error: blockError } = await supabase
         .from('user_blocks')
         .insert({
           blocker_id: user.id,
           blocked_id: profileUserId,
         });
 
-      if (error) throw error;
+      if (blockError) throw blockError;
+
+      // Remove mutual follow relationships
+      // Remove: I follow them
+      await supabase
+        .from('follows')
+        .delete()
+        .eq('follower_id', user.id)
+        .eq('following_id', profileUserId);
+
+      // Remove: They follow me
+      await supabase
+        .from('follows')
+        .delete()
+        .eq('follower_id', profileUserId)
+        .eq('following_id', user.id);
 
       setIsBlocked(true);
+      setIsFollowing(false);
       setShowProfileMenu(false);
-      showToast(language === 'tr' ? 'Kullanıcı engellendi' : 'User blocked', 'success');
+      
+      // Update stats
+      if (stats) {
+        setStats({ 
+          ...stats, 
+          followers_count: Math.max(0, stats.followers_count - 1)
+        });
+      }
+      
+      showToast(language === 'tr' ? 'Kullanıcı engellendi ve takip kaldırıldı' : 'User blocked and unfollowed', 'success');
     } catch (error) {
       console.error('Error blocking user:', error);
       showToast(language === 'tr' ? 'Kullanıcı engellenemedi' : 'Failed to block user', 'error');
@@ -1274,6 +1370,32 @@ export default function Profile() {
     }
   };
 
+  const removeFollower = async (followerId: string, followerName: string) => {
+    if (!user) return;
+    
+    if (!confirm(language === 'tr' ? `${followerName} takipçilerinizden çıkarılsın mı?` : `Remove ${followerName} from your followers?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('follows')
+        .delete()
+        .eq('follower_id', followerId)
+        .eq('following_id', user.id);
+
+      if (error) throw error;
+
+      setFollowersList(prev => prev.filter(f => f.id !== followerId));
+      if (stats) {
+        setStats({ ...stats, followers_count: Math.max(0, stats.followers_count - 1) });
+      }
+      showToast(language === 'tr' ? 'Takipçi çıkarıldı' : 'Follower removed', 'success');
+    } catch (error) {
+      console.error('Error removing follower:', error);
+      showToast(language === 'tr' ? 'Bir hata oluştu' : 'An error occurred', 'error');
+    }
+  };
 
   const handleFollow = async () => {
     if (!user) {
@@ -1285,6 +1407,7 @@ export default function Profile() {
 
     try {
       if (isFollowing) {
+        // Unfollow
         const { error } = await supabase
           .from('follows')
           .delete()
@@ -1297,20 +1420,66 @@ export default function Profile() {
           setStats({ ...stats, followers_count: Math.max(0, stats.followers_count - 1) });
         }
         showToast(t.profile.unfollowSuccess, 'info');
-      } else {
+      } else if (hasPendingRequest) {
+        // Cancel pending request
         const { error } = await supabase
-          .from('follows')
-          .insert({
-            follower_id: user.id,
-            following_id: profileUserId,
-          });
+          .from('follow_requests')
+          .delete()
+          .eq('requester_id', user.id)
+          .eq('target_id', profileUserId);
 
         if (error) throw error;
-        setIsFollowing(true);
-        if (stats) {
-          setStats({ ...stats, followers_count: stats.followers_count + 1 });
+        setHasPendingRequest(false);
+        showToast(language === 'tr' ? 'Takip isteği iptal edildi' : 'Follow request cancelled', 'info');
+      } else {
+        // Check if target profile is private
+        const { data: targetProfile } = await supabase
+          .from('profiles')
+          .select('is_public')
+          .eq('id', profileUserId)
+          .single();
+
+        const isTargetPrivate = targetProfile?.is_public === false;
+
+        if (isTargetPrivate) {
+          // Send follow request for private profile (upsert to handle duplicates)
+          const { data, error } = await supabase
+            .from('follow_requests')
+            .upsert({
+              requester_id: user.id,
+              target_id: profileUserId,
+              status: 'pending'
+            }, {
+              onConflict: 'requester_id,target_id'
+            })
+            .select();
+
+          if (error) {
+            console.error('Follow request error details:', error);
+            console.error('Error message:', error.message);
+            console.error('Error code:', error.code);
+            throw error;
+          }
+          
+          console.log('Follow request created/updated:', data);
+          setHasPendingRequest(true);
+          showToast(language === 'tr' ? 'Takip isteği gönderildi' : 'Follow request sent', 'success');
+        } else {
+          // Direct follow for public profile
+          const { error } = await supabase
+            .from('follows')
+            .insert({
+              follower_id: user.id,
+              following_id: profileUserId,
+            });
+
+          if (error) throw error;
+          setIsFollowing(true);
+          if (stats) {
+            setStats({ ...stats, followers_count: stats.followers_count + 1 });
+          }
+          showToast(t.profile.followSuccess, 'success');
         }
-        showToast(t.profile.followSuccess, 'success');
       }
     } catch (error) {
       console.error('Error toggling follow:', error);
@@ -1671,7 +1840,7 @@ export default function Profile() {
           
           <div className="space-y-6">
             {/* Profile Picture Section */}
-            <div className="flex items-center gap-6 pb-6 border-b border-purple-500/20">
+            <div className={`flex items-center gap-6 pb-6 ${(isOwnProfile || !isProfilePrivate || isFollowing) ? 'border-b border-purple-500/20' : ''}`}>
               <div className="relative group">
                 {isOwnProfile ? (
                   <button
@@ -1719,8 +1888,8 @@ export default function Profile() {
                   />
                 )}
               </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2 flex-wrap">
+              <div className="flex-1 pr-10 sm:pr-0">
+                <div className="flex items-center gap-2 sm:gap-3 mb-2 flex-wrap">
                   <h2 className="text-2xl font-semibold text-white">
                     {isEditing ? (
                       <input
@@ -1783,8 +1952,8 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* Stats */}
-            {stats && (
+            {/* Stats - Hidden for private profiles unless own profile or follower */}
+            {stats && (isOwnProfile || !isProfilePrivate || isFollowing) && (
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6 pb-6 border-b border-purple-500/20">
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-2 mb-1">
@@ -1989,6 +2158,8 @@ export default function Profile() {
                         className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
                           isFollowing
                             ? 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+                            : hasPendingRequest
+                            ? 'bg-yellow-600/20 text-yellow-300 hover:bg-yellow-600/30 border border-yellow-500/30'
                             : 'bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-500 hover:to-purple-500'
                         }`}
                       >
@@ -1996,6 +2167,11 @@ export default function Profile() {
                           <>
                             <UserCheck size={18} />
                             {t.profile.followingButton}
+                          </>
+                        ) : hasPendingRequest ? (
+                          <>
+                            <Loader2 size={18} />
+                            {language === 'tr' ? 'İstek Gönderildi' : 'Requested'}
                           </>
                         ) : (
                           <>
@@ -2027,7 +2203,17 @@ export default function Profile() {
               <h2 className="text-2xl font-semibold text-white">{t.profile.publicDreamsTitle}</h2>
             </div>
 
-            {loadingDreams ? (
+            {(isProfilePrivate && !isFollowing) ? (
+              <div className="text-center py-12 bg-slate-900/30 rounded-xl border border-purple-500/20">
+                <Lock className="mx-auto mb-4 text-slate-500" size={48} />
+                <p className="text-slate-400 font-medium">
+                  {language === 'tr' ? 'Bu profil gizlidir' : 'This profile is private'}
+                </p>
+                <p className="text-slate-500 text-sm mt-2">
+                  {language === 'tr' ? 'Bu kullanıcıyı takip ederek içeriklerini görebilirsiniz' : 'Follow this user to see their content'}
+                </p>
+              </div>
+            ) : loadingDreams ? (
               <div className="flex justify-center py-12">
                 <Loader2 className="animate-spin text-purple-400" size={32} />
               </div>
@@ -2118,29 +2304,44 @@ export default function Profile() {
               ) : (
                 <div className="space-y-3">
                   {followersList.map((follower) => (
-                    <button
+                    <div
                       key={follower.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/profile/${follower.id}`);
-                        setTimeout(() => setShowFollowersModal(false), 50);
-                      }}
-                      className="w-full flex items-center gap-3 p-3 hover:bg-slate-950/50 rounded-lg transition-colors cursor-pointer"
+                      className="flex items-center gap-3 p-3 hover:bg-slate-950/50 rounded-lg transition-colors"
                     >
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center overflow-hidden">
-                        {follower.avatar_url ? (
-                          <img src={follower.avatar_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <User size={24} className="text-white" />
-                        )}
-                      </div>
-                      <div className="flex-1 text-left">
-                        <p className="text-white font-medium">{follower.full_name}</p>
-                        {follower.username && (
-                          <p className="text-slate-400 text-sm">@{follower.username}</p>
-                        )}
-                      </div>
-                    </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/profile/${follower.id}`);
+                          setTimeout(() => setShowFollowersModal(false), 50);
+                        }}
+                        className="flex items-center gap-3 flex-1 cursor-pointer"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center overflow-hidden">
+                          {follower.avatar_url ? (
+                            <img src={follower.avatar_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <User size={24} className="text-white" />
+                          )}
+                        </div>
+                        <div className="flex-1 text-left">
+                          <p className="text-white font-medium">{follower.full_name}</p>
+                          {follower.username && (
+                            <p className="text-slate-400 text-sm">@{follower.username}</p>
+                          )}
+                        </div>
+                      </button>
+                      {isOwnProfile && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFollower(follower.id, follower.full_name);
+                          }}
+                          className="px-3 py-1.5 text-sm bg-red-600/20 text-red-400 hover:bg-red-600/30 rounded-lg transition-colors"
+                        >
+                          {language === 'tr' ? 'Çıkar' : 'Remove'}
+                        </button>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}

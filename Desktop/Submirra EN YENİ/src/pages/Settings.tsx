@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, CreditCard, Loader2, AlertCircle, CheckCircle2, Shield, Star, Lock, Bell, Wrench } from 'lucide-react';
+import { User, CreditCard, Loader2, AlertCircle, CheckCircle2, Shield, Star, Lock, Bell, Wrench, FileText, ShieldCheck, MessageSquare, ChevronRight, X } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from '../components/Router';
 import { useLanguage } from '../lib/i18n';
@@ -48,11 +48,21 @@ export default function Settings() {
   const [loadingReadReceipts, setLoadingReadReceipts] = useState(false);
   const [showOnlineStatus, setShowOnlineStatus] = useState(true);
   const [loadingOnlineStatus, setLoadingOnlineStatus] = useState(false);
+  const [isProfilePublic, setIsProfilePublic] = useState(true);
+  const [loadingProfileVisibility, setLoadingProfileVisibility] = useState(false);
+  const [allowMessagesFrom, setAllowMessagesFrom] = useState<'everyone' | 'following'>('everyone');
+  const [loadingMessagesFrom, setLoadingMessagesFrom] = useState(false);
   const [lemonSubscriptionId, setLemonSubscriptionId] = useState<string | null>(null);
   const [paymentFailed, setPaymentFailed] = useState(false);
   const [isDeveloper, setIsDeveloper] = useState(false);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [togglingMaintenance, setTogglingMaintenance] = useState(false);
+
+  // Load privacy settings only once when component mounts
+  useEffect(() => {
+    if (authLoading || !user) return;
+    loadReadReceiptsSetting();
+  }, [user, authLoading]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -70,8 +80,6 @@ export default function Settings() {
       loadBlockedUsers();
     } else if (activeTab === 'favorites') {
       loadFavoriteUsers();
-    } else if (activeTab === 'privacy') {
-      loadReadReceiptsSetting();
     }
   }, [user, authLoading, navigate, activeTab]);
 
@@ -272,17 +280,85 @@ export default function Settings() {
   const loadReadReceiptsSetting = async () => {
     if (!user) return;
     try {
-      const { data } = await supabase
+      // First load basic settings
+      const { data: basicData } = await supabase
         .from('profiles')
         .select('show_read_receipts, show_online_status')
         .eq('id', user.id)
         .single();
-      if (data) {
-        setShowReadReceipts(data.show_read_receipts !== false);
-        setShowOnlineStatus(data.show_online_status !== false);
+      
+      if (basicData) {
+        setShowReadReceipts(basicData.show_read_receipts !== false);
+        setShowOnlineStatus(basicData.show_online_status !== false);
+      }
+
+      // Try to load privacy settings separately (may not exist yet)
+      const { data: privacyData } = await supabase
+        .from('profiles')
+        .select('is_public, allow_messages_from')
+        .eq('id', user.id)
+        .single();
+      
+      if (privacyData) {
+        console.log('Privacy data:', privacyData);
+        const isPublic = privacyData.is_public !== false;
+        setIsProfilePublic(isPublic);
+        setAllowMessagesFrom(privacyData.allow_messages_from === 'following' ? 'following' : 'everyone');
       }
     } catch (error) {
       console.error('Error loading privacy settings:', error);
+    }
+  };
+
+  const updateProfileVisibility = async (isPublic: boolean) => {
+    if (!user) return;
+    setLoadingProfileVisibility(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_public: isPublic })
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      setIsProfilePublic(isPublic);
+      showToast(
+        language === 'tr' 
+          ? (isPublic ? 'Profiliniz herkese açık' : 'Profiliniz gizli') 
+          : (isPublic ? 'Your profile is public' : 'Your profile is private'),
+        'success'
+      );
+    } catch (error) {
+      console.error('Error updating profile visibility:', error);
+      showToast(language === 'tr' ? 'Güncelleme başarısız' : 'Update failed', 'error');
+    } finally {
+      setLoadingProfileVisibility(false);
+    }
+  };
+
+  const updateAllowMessagesFrom = async (value: 'everyone' | 'following') => {
+    if (!user) return;
+    setLoadingMessagesFrom(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ allow_messages_from: value })
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      setAllowMessagesFrom(value);
+      showToast(
+        language === 'tr' 
+          ? (value === 'everyone' ? 'Herkes size mesaj atabilir' : 'Sadece takipçileriniz mesaj atabilir') 
+          : (value === 'everyone' ? 'Everyone can message you' : 'Only followers can message you'),
+        'success'
+      );
+    } catch (error) {
+      console.error('Error updating messages setting:', error);
+      showToast(language === 'tr' ? 'Güncelleme başarısız' : 'Update failed', 'error');
+    } finally {
+      setLoadingMessagesFrom(false);
     }
   };
 
@@ -783,12 +859,22 @@ export default function Settings() {
                     {loadingReadReceipts ? (
                       <Loader2 className="animate-spin text-purple-400 ml-4" size={20} />
                     ) : (
-                      <input
-                        type="checkbox"
-                        checked={showReadReceipts}
-                        onChange={(e) => updateReadReceipts(e.target.checked)}
-                        className="w-5 h-5 rounded cursor-pointer ml-4"
-                      />
+                      <button
+                        onClick={() => updateReadReceipts(!showReadReceipts)}
+                        className={`relative ml-4 w-14 h-8 rounded-full transition-all duration-300 ${
+                          showReadReceipts ? 'bg-green-500' : 'bg-slate-600'
+                        }`}
+                      >
+                        <div className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300 flex items-center justify-center ${
+                          showReadReceipts ? 'left-7' : 'left-1'
+                        }`}>
+                          {showReadReceipts ? (
+                            <CheckCircle2 className="text-green-500" size={14} />
+                          ) : (
+                            <X className="text-slate-400" size={14} />
+                          )}
+                        </div>
+                      </button>
                     )}
                   </label>
                 </div>
@@ -801,32 +887,100 @@ export default function Settings() {
                     {loadingOnlineStatus ? (
                       <Loader2 className="animate-spin text-purple-400 ml-4" size={20} />
                     ) : (
-                      <input
-                        type="checkbox"
-                        checked={showOnlineStatus}
-                        onChange={(e) => updateOnlineStatus(e.target.checked)}
-                        className="w-5 h-5 rounded cursor-pointer ml-4"
-                      />
+                      <button
+                        onClick={() => updateOnlineStatus(!showOnlineStatus)}
+                        className={`relative ml-4 w-14 h-8 rounded-full transition-all duration-300 ${
+                          showOnlineStatus ? 'bg-green-500' : 'bg-slate-600'
+                        }`}
+                      >
+                        <div className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300 flex items-center justify-center ${
+                          showOnlineStatus ? 'left-7' : 'left-1'
+                        }`}>
+                          {showOnlineStatus ? (
+                            <CheckCircle2 className="text-green-500" size={14} />
+                          ) : (
+                            <X className="text-slate-400" size={14} />
+                          )}
+                        </div>
+                      </button>
                     )}
                   </label>
                 </div>
                 <div className="p-4 bg-slate-950/30 rounded-xl border border-purple-500/10">
-                  <label className="flex items-center justify-between cursor-pointer">
-                    <span className="text-white font-medium">{t.settings.profileVisibility}</span>
-                    <select className="bg-slate-800 border border-purple-500/30 rounded px-3 py-2 text-white text-sm cursor-pointer">
-                      <option>{t.settings.public}</option>
-                      <option>{t.settings.private}</option>
-                    </select>
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <span className="text-white font-medium">{t.settings.profileVisibility}</span>
+                      <p className="text-slate-400 text-sm mt-1">
+                        {language === 'tr' 
+                          ? 'Profiliniz gizli mi olsun?' 
+                          : 'Make your profile private?'}
+                      </p>
+                    </div>
+                    {loadingProfileVisibility ? (
+                      <Loader2 className="animate-spin text-purple-400 ml-4" size={20} />
+                    ) : (
+                      <button
+                        onClick={() => updateProfileVisibility(!isProfilePublic)}
+                        className={`relative ml-4 w-14 h-8 rounded-full transition-all duration-300 ${
+                          !isProfilePublic ? 'bg-green-500' : 'bg-slate-600'
+                        }`}
+                      >
+                        <div className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300 flex items-center justify-center ${
+                          !isProfilePublic ? 'left-7' : 'left-1'
+                        }`}>
+                          {!isProfilePublic ? (
+                            <Lock className="text-green-500" size={12} />
+                          ) : (
+                            <User className="text-slate-400" size={12} />
+                          )}
+                        </div>
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs mt-2 text-slate-500">
+                    {!isProfilePublic 
+                      ? (language === 'tr' ? '🔒 Profiliniz gizli - sadece takipçileriniz görebilir' : '🔒 Your profile is private - only followers can see')
+                      : (language === 'tr' ? '🌐 Profiliniz herkese açık' : '🌐 Your profile is public')
+                    }
+                  </p>
                 </div>
                 <div className="p-4 bg-slate-950/30 rounded-xl border border-purple-500/10">
-                  <label className="flex items-center justify-between cursor-pointer">
-                    <span className="text-white font-medium">{t.settings.allowMessagesFrom}</span>
-                    <select className="bg-slate-800 border border-purple-500/30 rounded px-3 py-2 text-white text-sm cursor-pointer">
-                      <option>{t.settings.everyone}</option>
-                      <option>{t.settings.followingOnly}</option>
-                    </select>
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <span className="text-white font-medium">{t.settings.allowMessagesFrom}</span>
+                      <p className="text-slate-400 text-sm mt-1">
+                        {language === 'tr' 
+                          ? 'Sadece takipçilerim mesaj atabilsin' 
+                          : 'Only followers can message me'}
+                      </p>
+                    </div>
+                    {loadingMessagesFrom ? (
+                      <Loader2 className="animate-spin text-purple-400 ml-4" size={20} />
+                    ) : (
+                      <button
+                        onClick={() => updateAllowMessagesFrom(allowMessagesFrom === 'everyone' ? 'following' : 'everyone')}
+                        className={`relative ml-4 w-14 h-8 rounded-full transition-all duration-300 ${
+                          allowMessagesFrom === 'following' ? 'bg-green-500' : 'bg-slate-600'
+                        }`}
+                      >
+                        <div className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300 flex items-center justify-center ${
+                          allowMessagesFrom === 'following' ? 'left-7' : 'left-1'
+                        }`}>
+                          {allowMessagesFrom === 'following' ? (
+                            <CheckCircle2 className="text-green-500" size={14} />
+                          ) : (
+                            <X className="text-slate-400" size={14} />
+                          )}
+                        </div>
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs mt-2 text-slate-500">
+                    {allowMessagesFrom === 'following' 
+                      ? (language === 'tr' ? '👥 Sadece takipçileriniz mesaj atabilir' : '👥 Only your followers can message you')
+                      : (language === 'tr' ? '🌐 Herkes size mesaj atabilir' : '🌐 Everyone can message you')
+                    }
+                  </p>
                 </div>
               </div>
             </div>
@@ -839,22 +993,38 @@ export default function Settings() {
                 {t.settings.notificationsDesc}
               </p>
               <div className="space-y-3">
-                <label className="flex items-center justify-between p-4 bg-slate-950/30 rounded-xl border border-purple-500/10 cursor-pointer">
+                <div className="flex items-center justify-between p-4 bg-slate-950/30 rounded-xl border border-purple-500/10">
                   <span className="text-white font-medium">{t.settings.likesOnDreams}</span>
-                  <input type="checkbox" defaultChecked className="w-5 h-5 rounded cursor-pointer" />
-                </label>
-                <label className="flex items-center justify-between p-4 bg-slate-950/30 rounded-xl border border-purple-500/10 cursor-pointer">
+                  <button className="relative w-14 h-8 rounded-full transition-all duration-300 bg-green-500">
+                    <div className="absolute top-1 left-7 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300 flex items-center justify-center">
+                      <CheckCircle2 className="text-green-500" size={14} />
+                    </div>
+                  </button>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-slate-950/30 rounded-xl border border-purple-500/10">
                   <span className="text-white font-medium">{t.settings.comments}</span>
-                  <input type="checkbox" defaultChecked className="w-5 h-5 rounded cursor-pointer" />
-                </label>
-                <label className="flex items-center justify-between p-4 bg-slate-950/30 rounded-xl border border-purple-500/10 cursor-pointer">
+                  <button className="relative w-14 h-8 rounded-full transition-all duration-300 bg-green-500">
+                    <div className="absolute top-1 left-7 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300 flex items-center justify-center">
+                      <CheckCircle2 className="text-green-500" size={14} />
+                    </div>
+                  </button>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-slate-950/30 rounded-xl border border-purple-500/10">
                   <span className="text-white font-medium">{t.settings.newFollowers}</span>
-                  <input type="checkbox" defaultChecked className="w-5 h-5 rounded cursor-pointer" />
-                </label>
-                <label className="flex items-center justify-between p-4 bg-slate-950/30 rounded-xl border border-purple-500/10 cursor-pointer">
+                  <button className="relative w-14 h-8 rounded-full transition-all duration-300 bg-green-500">
+                    <div className="absolute top-1 left-7 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300 flex items-center justify-center">
+                      <CheckCircle2 className="text-green-500" size={14} />
+                    </div>
+                  </button>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-slate-950/30 rounded-xl border border-purple-500/10">
                   <span className="text-white font-medium">{t.settings.directMessages}</span>
-                  <input type="checkbox" defaultChecked className="w-5 h-5 rounded cursor-pointer" />
-                </label>
+                  <button className="relative w-14 h-8 rounded-full transition-all duration-300 bg-green-500">
+                    <div className="absolute top-1 left-7 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300 flex items-center justify-center">
+                      <CheckCircle2 className="text-green-500" size={14} />
+                    </div>
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -929,6 +1099,59 @@ export default function Settings() {
               </div>
             </div>
           )}
+
+          {/* Legal & Support Section - Mobile Only */}
+          <div className="mt-8 p-6 bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl md:hidden">
+            <h3 className="text-lg font-semibold text-white mb-4">
+              {language === 'tr' ? 'Yasal & Destek' : 'Legal & Support'}
+            </h3>
+            <div className="space-y-2">
+              <button
+                onClick={() => navigate('/terms')}
+                className="w-full flex items-center justify-between p-3 bg-slate-800/50 hover:bg-slate-800 rounded-xl transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                    <FileText className="text-purple-400" size={20} />
+                  </div>
+                  <span className="text-white font-medium">
+                    {language === 'tr' ? 'Kullanım Koşulları' : 'Terms of Service'}
+                  </span>
+                </div>
+                <ChevronRight className="text-slate-500 group-hover:text-purple-400 transition-colors" size={20} />
+              </button>
+
+              <button
+                onClick={() => navigate('/privacy')}
+                className="w-full flex items-center justify-between p-3 bg-slate-800/50 hover:bg-slate-800 rounded-xl transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-pink-500/20 flex items-center justify-center">
+                    <ShieldCheck className="text-pink-400" size={20} />
+                  </div>
+                  <span className="text-white font-medium">
+                    {language === 'tr' ? 'Gizlilik Politikası' : 'Privacy Policy'}
+                  </span>
+                </div>
+                <ChevronRight className="text-slate-500 group-hover:text-pink-400 transition-colors" size={20} />
+              </button>
+
+              <button
+                onClick={() => navigate('/feedback')}
+                className="w-full flex items-center justify-between p-3 bg-slate-800/50 hover:bg-slate-800 rounded-xl transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+                    <MessageSquare className="text-cyan-400" size={20} />
+                  </div>
+                  <span className="text-white font-medium">
+                    {language === 'tr' ? 'Geri Bildirim' : 'Feedback'}
+                  </span>
+                </div>
+                <ChevronRight className="text-slate-500 group-hover:text-cyan-400 transition-colors" size={20} />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

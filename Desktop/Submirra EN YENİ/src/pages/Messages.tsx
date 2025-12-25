@@ -506,6 +506,33 @@ export default function Messages() {
     if (!newMessage.trim() || !selectedChat || !user) return;
 
     try {
+      // Check if receiver allows messages from this user
+      const { data: receiverProfile } = await supabase
+        .from('profiles')
+        .select('allow_messages_from')
+        .eq('id', selectedChat)
+        .single();
+
+      if (receiverProfile?.allow_messages_from === 'following') {
+        // Check if receiver is following the sender
+        const { data: followData } = await supabase
+          .from('user_follows')
+          .select('id')
+          .eq('follower_id', selectedChat)
+          .eq('following_id', user.id)
+          .single();
+
+        if (!followData) {
+          showToast(
+            language === 'tr' 
+              ? 'Bu kullanıcı sadece takipçilerinden mesaj alıyor' 
+              : 'This user only accepts messages from followers',
+            'error'
+          );
+          return;
+        }
+      }
+
       const { error } = await supabase
         .from('messages')
         .insert({
@@ -843,9 +870,9 @@ export default function Messages() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-slate-950 pt-20 pb-8">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-2xl overflow-hidden h-[calc(100vh-140px)] flex">
+    <div className="min-h-screen bg-slate-950 pt-16 sm:pt-20 pb-4 sm:pb-8">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4">
+        <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl sm:rounded-2xl overflow-hidden h-[calc(100vh-80px)] sm:h-[calc(100vh-140px)] flex">
           
           {/* Sidebar */}
           <div className={`${selectedChat ? 'hidden md:flex' : 'flex'} w-full md:w-96 flex-col border-r border-slate-800`}>
@@ -1156,7 +1183,7 @@ export default function Messages() {
                 </div>
 
                 {/* Message Input */}
-                <div className="p-4 border-t border-slate-800">
+                <div className="p-2 sm:p-4 border-t border-slate-800">
                   {replyingTo && (
                     <div className="mb-2 bg-slate-800/50 rounded-lg p-2 flex items-center justify-between">
                       <div className="flex items-center gap-2 text-sm text-slate-300">
@@ -1171,7 +1198,7 @@ export default function Messages() {
                       </button>
                     </div>
                   )}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 sm:gap-2">
                     <EmojiPicker 
                       onEmojiSelect={(emoji) => setNewMessage(prev => prev + emoji)}
                       position="top"
@@ -1218,14 +1245,14 @@ export default function Messages() {
                         }
                       }}
                       placeholder={language === 'tr' ? 'Mesaj yazın...' : 'Type a message...'}
-                      className="flex-1 bg-slate-800/50 border border-slate-700 rounded-full px-4 py-2.5 text-white placeholder-slate-400 focus:outline-none focus:border-pink-500/50"
+                      className="flex-1 min-w-0 bg-slate-800/50 border border-slate-700 rounded-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-white placeholder-slate-400 focus:outline-none focus:border-pink-500/50"
                     />
                     <button
                       onClick={sendMessage}
                       disabled={!newMessage.trim() || isUploading}
-                      className="bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-full p-2.5 hover:shadow-lg hover:shadow-pink-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-shrink-0 bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-full p-2 sm:p-2.5 hover:shadow-lg hover:shadow-pink-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Send size={20} />
+                      <Send size={18} className="sm:w-5 sm:h-5" />
                     </button>
                   </div>
                 </div>

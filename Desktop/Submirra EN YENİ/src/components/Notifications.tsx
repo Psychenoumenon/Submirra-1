@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Bell, Heart, MessageCircle, UserPlus, X, Loader2, CheckCircle, AlertCircle, Trash2 } from 'lucide-react';
+import { Bell, Heart, MessageCircle, UserPlus, X, Loader2, CheckCircle, AlertCircle, Trash2, Check, User } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from './Router';
 import { supabase } from '../lib/supabase';
@@ -21,15 +21,28 @@ interface Notification {
   } | null;
 }
 
+interface FollowRequest {
+  id: string;
+  requester_id: string;
+  created_at: string;
+  requester_profile: {
+    full_name: string;
+    avatar_url: string | null;
+    username: string | null;
+  };
+}
+
 export default function Notifications() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { t, language } = useLanguage();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [followRequests, setFollowRequests] = useState<FollowRequest[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'notifications' | 'requests'>('notifications');
 
   const loadNotifications = useCallback(async () => {
     if (!user) return;
@@ -59,12 +72,96 @@ export default function Notifications() {
 
       setNotifications(formattedNotifications);
       setUnreadCount(formattedNotifications.filter(n => !n.read_at).length);
+      
+      // Also load follow requests
+      await loadFollowRequests();
     } catch (error) {
       console.error('Error loading notifications:', error);
     } finally {
       setLoading(false);
     }
   }, [user]);
+
+  const loadFollowRequests = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('follow_requests')
+        .select(`
+          id,
+          requester_id,
+          created_at,
+          requester_profile:requester_id (
+            full_name,
+            avatar_url,
+            username
+          )
+        `)
+        .eq('target_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      const formatted = (data || []).map(req => {
+        const profile = Array.isArray(req.requester_profile) 
+          ? req.requester_profile[0] 
+          : req.requester_profile;
+        return {
+          id: req.id,
+          requester_id: req.requester_id,
+          created_at: req.created_at,
+          requester_profile: profile || { full_name: 'Unknown', avatar_url: null, username: null }
+        };
+      });
+      
+      setFollowRequests(formatted);
+    } catch (error) {
+      console.error('Error loading follow requests:', error);
+    }
+  };
+
+  const handleAcceptRequest = async (requestId: string, requesterId: string) => {
+    if (!user) return;
+    
+    try {
+      // Update request status
+      await supabase
+        .from('follow_requests')
+        .update({ status: 'accepted' })
+        .eq('id', requestId);
+
+      // Create follow relationship
+      await supabase
+        .from('follows')
+        .insert({
+          follower_id: requesterId,
+          following_id: user.id
+        });
+
+      // Remove from local state
+      setFollowRequests(prev => prev.filter(r => r.id !== requestId));
+      showToast(language === 'tr' ? 'Takip isteği kabul edildi' : 'Follow request accepted', 'success');
+    } catch (error) {
+      console.error('Error accepting follow request:', error);
+      showToast(language === 'tr' ? 'Bir hata oluştu' : 'An error occurred', 'error');
+    }
+  };
+
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      await supabase
+        .from('follow_requests')
+        .update({ status: 'rejected' })
+        .eq('id', requestId);
+
+      setFollowRequests(prev => prev.filter(r => r.id !== requestId));
+      showToast(language === 'tr' ? 'Takip isteği reddedildi' : 'Follow request rejected', 'info');
+    } catch (error) {
+      console.error('Error rejecting follow request:', error);
+    }
+  };
 
   // Function to add a single new notification instantly
   const addNewNotification = useCallback(async (notificationId: string) => {
@@ -378,8 +475,13 @@ export default function Notifications() {
         className="relative p-2 text-slate-400 hover:text-purple-400 transition-colors"
       >
         <Bell size={20} />
+        {followRequests.length > 0 && (
+          <span className="absolute top-1 left-1 min-w-[16px] h-4 px-1 bg-blue-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold shadow-lg border border-slate-900">
+            {followRequests.length > 9 ? '9+' : followRequests.length}
+          </span>
+        )}
         {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 w-5 h-5 bg-pink-500 rounded-full text-white text-xs flex items-center justify-center font-bold">
+          <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-pink-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold shadow-lg border border-slate-900">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -391,28 +493,10 @@ export default function Notifications() {
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute right-0 top-12 w-[600px] max-h-[700px] bg-slate-900 border border-purple-500/30 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col max-w-[95vw]">
-            <div className="p-5 border-b border-purple-500/20 flex items-center justify-between">
-              <h3 className="text-xl font-semibold text-white">{t.notifications.title}</h3>
-              <div className="flex gap-2 items-center">
-                {notifications.length > 0 && (
-                  <button
-                    onClick={deleteAllNotifications}
-                    className="text-xs text-red-400 hover:text-red-300 transition-colors px-2 py-1 rounded hover:bg-red-500/10 flex items-center gap-1"
-                    title={t.notifications.deleteAll || 'Delete all notifications'}
-                  >
-                    <Trash2 size={12} />
-                    {t.notifications.deleteAll || 'Delete all'}
-                  </button>
-                )}
-                {unreadCount > 0 && (
-                  <button
-                    onClick={markAllAsRead}
-                    className="text-xs text-purple-400 hover:text-purple-300 transition-colors px-2 py-1 rounded hover:bg-purple-500/10"
-                  >
-                    {t.notifications.markAllRead}
-                  </button>
-                )}
+          <div className="fixed sm:absolute inset-x-2 sm:inset-x-auto sm:right-0 top-16 sm:top-12 sm:w-[400px] md:w-[500px] lg:w-[600px] max-h-[75vh] sm:max-h-[80vh] md:max-h-[700px] bg-slate-900 border border-purple-500/30 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-purple-500/20">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xl font-semibold text-white">{t.notifications.title}</h3>
                 <button
                   onClick={() => setIsOpen(false)}
                   className="text-slate-400 hover:text-white transition-colors"
@@ -422,10 +506,123 @@ export default function Notifications() {
                   <X size={18} />
                 </button>
               </div>
+              
+              {/* Tabs */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setActiveTab('notifications')}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                    activeTab === 'notifications'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }`}
+                >
+                  <Bell size={14} className="inline mr-1" />
+                  {language === 'tr' ? 'Bildirimler' : 'Notifications'}
+                  {unreadCount > 0 && (
+                    <span className="ml-1 px-1.5 py-0.5 bg-pink-500 rounded-full text-xs">{unreadCount}</span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setActiveTab('requests')}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                    activeTab === 'requests'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }`}
+                >
+                  <UserPlus size={14} className="inline mr-1" />
+                  {language === 'tr' ? 'İstekler' : 'Requests'}
+                  {followRequests.length > 0 && (
+                    <span className="ml-1 px-1.5 py-0.5 bg-cyan-500 rounded-full text-xs">{followRequests.length}</span>
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className="overflow-y-auto flex-1 scrollbar-hide">
-              {loading ? (
+              {/* Follow Requests Tab */}
+              {activeTab === 'requests' && (
+                <div className="p-2">
+                  {followRequests.length === 0 ? (
+                    <div className="text-center py-8 px-4">
+                      <UserPlus className="mx-auto mb-3 text-slate-600" size={32} />
+                      <p className="text-slate-400">{language === 'tr' ? 'Takip isteği yok' : 'No follow requests'}</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {followRequests.map((request) => (
+                        <div
+                          key={request.id}
+                          className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl hover:bg-slate-800 transition-colors"
+                        >
+                          <button
+                            onClick={() => {
+                              navigate(`/profile/${request.requester_id}`);
+                              setIsOpen(false);
+                            }}
+                            className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500/20 to-purple-500/20 border border-cyan-500/30 flex items-center justify-center overflow-hidden"
+                          >
+                            {request.requester_profile.avatar_url ? (
+                              <img src={request.requester_profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <User className="text-cyan-400" size={20} />
+                            )}
+                          </button>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white font-medium text-sm truncate">
+                              {request.requester_profile.full_name}
+                            </p>
+                            <p className="text-slate-500 text-xs">
+                              {language === 'tr' ? 'sizi takip etmek istiyor' : 'wants to follow you'}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleAcceptRequest(request.id, request.requester_id)}
+                              className="p-2 bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors"
+                              title={language === 'tr' ? 'Kabul Et' : 'Accept'}
+                            >
+                              <Check size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleRejectRequest(request.id)}
+                              className="p-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg transition-colors"
+                              title={language === 'tr' ? 'Reddet' : 'Reject'}
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Notifications Tab */}
+              {activeTab === 'notifications' && (
+                <div>
+                  <div className="flex justify-end gap-2 p-2 border-b border-purple-500/10">
+                    {notifications.length > 0 && (
+                      <button
+                        onClick={deleteAllNotifications}
+                        className="text-xs text-red-400 hover:text-red-300 transition-colors px-2 py-1 rounded hover:bg-red-500/10 flex items-center gap-1"
+                      >
+                        <Trash2 size={12} />
+                        {t.notifications.deleteAll || 'Delete all'}
+                      </button>
+                    )}
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={markAllAsRead}
+                        className="text-xs text-purple-400 hover:text-purple-300 transition-colors px-2 py-1 rounded hover:bg-purple-500/10"
+                      >
+                        {t.notifications.markAllRead}
+                      </button>
+                    )}
+                  </div>
+                  {loading ? (
                 <div className="flex justify-center py-8">
                   <Loader2 className="animate-spin text-purple-400" size={24} />
                 </div>
@@ -477,6 +674,8 @@ export default function Notifications() {
                       </button>
                     </div>
                   ))}
+                  </div>
+                )}
                 </div>
               )}
             </div>
