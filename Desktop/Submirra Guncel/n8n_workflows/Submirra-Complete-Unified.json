@@ -1,0 +1,43 @@
+{
+  "name": "🌙 Submirra - Complete Unified (Dreams + Generator)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dream-webhook",
+        "options": {}
+      },
+      "id": "ff487f95-054e-493c-b725-bdf8399fd018",
+      "name": "Dream Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-16, 416],
+      "webhookId": "dream-webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generator-webhook",
+        "options": {}
+      },
+      "id": "gen-webhook-001",
+      "name": "🎨 Generator Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-16, -600],
+      "webhookId": "generator-webhook"
+    }
+  ],
+  "connections": {
+    "Dream Webhook": {
+      "main": [[{"node": "Set Variables", "type": "main", "index": 0}]]
+    },
+    "Generator Webhook": {
+      "main": [[{"node": "Set Generator Variables", "type": "main", "index": 0}]]
+    }
+  },
+  "active": true,
+  "settings": {"executionOrder": "v1"},
+  "meta": {"templateCredsSetupCompleted": true},
+  "tags": []
+}

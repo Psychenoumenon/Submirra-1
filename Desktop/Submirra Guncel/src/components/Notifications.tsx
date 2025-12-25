@@ -1,0 +1,691 @@
+import { useState, useEffect, useCallback } from 'react';
+import { Bell, Heart, MessageCircle, UserPlus, X, Loader2, CheckCircle, AlertCircle, Trash2, Check, User } from 'lucide-react';
+import { useAuth } from '../lib/AuthContext';
+import { useNavigate } from './Router';
+import { supabase } from '../lib/supabase';
+import { useToast } from '../lib/ToastContext';
+import { useLanguage } from '../lib/i18n';
+
+interface Notification {
+  id: string;
+  type: 'like' | 'comment' | 'follow' | 'dream_completed' | 'trial_expired';
+  actor_id: string | null;
+  dream_id: string | null;
+  comment_id: string | null;
+  created_at: string;
+  read_at: string | null;
+  actor_profile: {
+    full_name: string;
+    avatar_url: string | null;
+    username: string | null;
+  } | null;
+}
+
+interface FollowRequest {
+  id: string;
+  requester_id: string;
+  created_at: string;
+  requester_profile: {
+    full_name: string;
+    avatar_url: string | null;
+    username: string | null;
+  };
+}
+
+export default function Notifications() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { showToast } = useToast();
+  const { t, language } = useLanguage();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [followRequests, setFollowRequests] = useState<FollowRequest[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'notifications' | 'requests'>('notifications');
+
+  const loadNotifications = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('notifications')
+        .select(`
+          *,
+          actor_profile:actor_id (
+            full_name,
+            avatar_url,
+            username
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      const formattedNotifications = (data || []).map(notif => ({
+        ...notif,
+        actor_profile: notif.actor_profile || (notif.type === 'dream_completed' ? null : { full_name: 'Anonymous', avatar_url: null, username: null })
+      }));
+
+      setNotifications(formattedNotifications);
+      setUnreadCount(formattedNotifications.filter(n => !n.read_at).length);
+      
+      // Also load follow requests
+      await loadFollowRequests();
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  const loadFollowRequests = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('follow_requests')
+        .select(`
+          id,
+          requester_id,
+          created_at,
+          requester_profile:requester_id (
+            full_name,
+            avatar_url,
+            username
+          )
+        `)
+        .eq('target_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      const formatted = (data || []).map(req => {
+        const profile = Array.isArray(req.requester_profile) 
+          ? req.requester_profile[0] 
+          : req.requester_profile;
+        return {
+          id: req.id,
+          requester_id: req.requester_id,
+          created_at: req.created_at,
+          requester_profile: profile || { full_name: 'Unknown', avatar_url: null, username: null }
+        };
+      });
+      
+      setFollowRequests(formatted);
+    } catch (error) {
+      console.error('Error loading follow requests:', error);
+    }
+  };
+
+  const handleAcceptRequest = async (requestId: string, requesterId: string) => {
+    if (!user) return;
+    
+    try {
+      // Update request status
+      await supabase
+        .from('follow_requests')
+        .update({ status: 'accepted' })
+        .eq('id', requestId);
+
+      // Create follow relationship
+      await supabase
+        .from('follows')
+        .insert({
+          follower_id: requesterId,
+          following_id: user.id
+        });
+
+      // Remove from local state
+      setFollowRequests(prev => prev.filter(r => r.id !== requestId));
+      showToast(language === 'tr' ? 'Takip isteği kabul edildi' : 'Follow request accepted', 'success');
+    } catch (error) {
+      console.error('Error accepting follow request:', error);
+      showToast(language === 'tr' ? 'Bir hata oluştu' : 'An error occurred', 'error');
+    }
+  };
+
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      await supabase
+        .from('follow_requests')
+        .update({ status: 'rejected' })
+        .eq('id', requestId);
+
+      setFollowRequests(prev => prev.filter(r => r.id !== requestId));
+      showToast(language === 'tr' ? 'Takip isteği reddedildi' : 'Follow request rejected', 'info');
+    } catch (error) {
+      console.error('Error rejecting follow request:', error);
+    }
+  };
+
+  // Function to add a single new notification instantly
+  const addNewNotification = useCallback(async (notificationId: string) => {
+    if (!user) return;
+
+    try {
+      // Fetch only the new notification with its profile
+      const { data, error } = await supabase
+        .from('notifications')
+        .select(`
+          *,
+          actor_profile:actor_id (
+            full_name,
+            avatar_url,
+            username
+          )
+        `)
+        .eq('id', notificationId)
+        .single();
+
+      if (error) throw error;
+
+      const formattedNotification = {
+        ...data,
+        actor_profile: data.actor_profile || (data.type === 'dream_completed' ? null : { full_name: 'Anonymous', avatar_url: null, username: null })
+      };
+
+      // Add to the beginning of the list instantly
+      setNotifications(prev => {
+        // Check if notification already exists (prevent duplicates)
+        if (prev.some(n => n.id === notificationId)) {
+          return prev;
+        }
+        return [formattedNotification, ...prev];
+      });
+
+      // Increment unread count instantly
+      setUnreadCount(prev => prev + 1);
+
+      // Show toast notification
+      if (formattedNotification.type === 'dream_completed') {
+        showToast(t.notifications.dreamCompletedToast, 'success');
+      }
+    } catch (error) {
+      console.error('Error adding new notification:', error);
+      // Fallback: reload all notifications if single fetch fails
+      loadNotifications();
+    }
+  }, [user, loadNotifications, showToast]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    console.log('🔔 Setting up notifications real-time subscription for user:', user.id);
+
+    // CRITICAL: Set up real-time subscription FIRST, then load notifications
+    // This ensures we don't miss any notifications that arrive during page load
+    const notificationsChannel = supabase
+      .channel(`notifications-${user.id}-${Date.now()}`) // Unique channel name to avoid conflicts
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('🔔 NEW NOTIFICATION RECEIVED INSTANTLY:', payload);
+          console.log('🔔 Notification ID:', payload.new?.id);
+          console.log('🔔 Notification Type:', payload.new?.type);
+          // Add notification instantly without reloading all
+          if (payload.new?.id) {
+            console.log('✅ Adding notification to list instantly');
+            addNewNotification(payload.new.id);
+          } else {
+            console.error('❌ Notification ID missing, cannot add');
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('🔔 Notifications channel subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Real-time notifications ACTIVE and listening');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Notifications subscription ERROR');
+        } else if (status === 'TIMED_OUT') {
+          console.error('⏱️ Notifications subscription TIMED OUT');
+        }
+      });
+
+    // Load notifications immediately after setting up subscription
+    // Subscription will catch any notifications that arrive during/after load
+    loadNotifications();
+
+    // Also listen to dreams table updates to catch when status changes to 'completed'
+    // The notification INSERT event will be triggered by the database trigger,
+    // so we don't need to reload here - the notification will come instantly via INSERT event
+    // This is just a backup in case the trigger is slow
+    const dreamsChannel = supabase
+      .channel(`dreams-status-${user.id}-${Date.now()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'dreams',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('Dream status changed:', payload);
+          // Check if status changed to 'completed'
+          if (payload.new.status === 'completed' && payload.old.status !== 'completed') {
+            console.log('Dream completed - notification should arrive via INSERT event');
+            // No delay needed - notification INSERT will trigger instantly via trigger
+            // This is just a safety net in case trigger is delayed
+            setTimeout(() => {
+              loadNotifications();
+            }, 2000); // Only as fallback after 2 seconds if notification didn't arrive
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(notificationsChannel);
+      supabase.removeChannel(dreamsChannel);
+    };
+  }, [user, loadNotifications, addNewNotification]);
+
+  const markAsRead = async (notificationId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read_at: new Date().toISOString() })
+        .eq('id', notificationId);
+
+      if (error) throw error;
+
+      setNotifications(prev =>
+        prev.map(n =>
+          n.id === notificationId ? { ...n, read_at: new Date().toISOString() } : n
+        )
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const deleteNotification = async (notificationId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', notificationId);
+
+      if (error) throw error;
+
+      const deletedNotif = notifications.find(n => n.id === notificationId);
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      
+      if (deletedNotif && !deletedNotif.read_at) {
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      showToast(t.notifications.deleteError, 'error');
+    }
+  };
+
+  const markAllAsRead = async () => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read_at: new Date().toISOString() })
+        .eq('user_id', user.id)
+        .is('read_at', null);
+
+      if (error) throw error;
+
+      setNotifications(prev =>
+        prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() }))
+      );
+      setUnreadCount(0);
+      showToast(t.notifications.markAllReadSuccess, 'success');
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+      showToast(t.notifications.markAllReadError, 'error');
+    }
+  };
+
+  const deleteAllNotifications = async () => {
+    if (!user) return;
+
+    if (!confirm(t.notifications.deleteAllConfirm || 'Are you sure you want to delete all notifications?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setNotifications([]);
+      setUnreadCount(0);
+      showToast(t.notifications.deleteAllSuccess || 'All notifications deleted', 'success');
+    } catch (error) {
+      console.error('Error deleting all notifications:', error);
+      showToast(t.notifications.deleteAllError || 'Failed to delete all notifications', 'error');
+    }
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    markAsRead(notification.id);
+    setIsOpen(false);
+
+    if (notification.type === 'dream_completed') {
+      navigate('/library');
+    } else if (notification.type === 'trial_expired') {
+      navigate('/pricing');
+    } else if (notification.dream_id) {
+      // Navigate to social with dream_id to open modal automatically
+      const params = new URLSearchParams();
+      params.set('dream', notification.dream_id);
+      if (notification.comment_id) {
+        params.set('comment', notification.comment_id);
+      }
+      navigate(`/social?${params.toString()}`);
+    } else if (notification.type === 'follow' && notification.actor_id) {
+      navigate(`/profile/${notification.actor_id}`);
+    }
+  };
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'like':
+        return <Heart className="text-pink-400" size={18} />;
+      case 'comment':
+        return <MessageCircle className="text-purple-400" size={18} />;
+      case 'follow':
+        return <UserPlus className="text-cyan-400" size={18} />;
+      case 'dream_completed':
+        return <CheckCircle className="text-green-400" size={18} />;
+      case 'trial_expired':
+        return <AlertCircle className="text-yellow-400" size={18} />;
+      default:
+        return <Bell className="text-slate-400" size={18} />;
+    }
+  };
+
+  const getNotificationText = (notification: Notification) => {
+    if (notification.type === 'dream_completed') {
+      return t.notifications.dreamCompleted;
+    }
+    
+    if (notification.type === 'trial_expired') {
+      return t.notifications.trialExpired;
+    }
+    
+    const name = notification.actor_profile?.full_name || notification.actor_profile?.username || t.notifications.someone;
+    switch (notification.type) {
+      case 'like':
+        return `${name} ${t.notifications.someoneLiked}`;
+      case 'comment':
+        return `${name} ${t.notifications.someoneCommented}`;
+      case 'follow':
+        return `${name} ${t.notifications.someoneFollowed}`;
+      default:
+        return t.notifications.newNotification;
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (minutes < 1) return t.notifications.justNow;
+    if (minutes < 60) return `${minutes} ${t.notifications.minutesAgo}`;
+    if (hours < 24) return `${hours} ${t.notifications.hoursAgo}`;
+    if (days < 7) return `${days} ${t.notifications.daysAgo}`;
+    
+    const locale = language === 'tr' ? 'tr-TR' : 'en-US';
+    return date.toLocaleDateString(locale, {
+      month: 'short',
+      day: 'numeric',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    });
+  };
+
+  if (!user) return null;
+
+  return (
+    <div className="relative">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(!isOpen);
+        }}
+        className="relative p-3 text-slate-400 hover:text-purple-400 transition-colors flex items-center justify-center"
+      >
+        <Bell size={22} />
+        {followRequests.length > 0 && (
+          <span className="absolute top-1 left-1 min-w-[16px] h-4 px-1 bg-blue-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold shadow-lg border border-slate-900">
+            {followRequests.length > 9 ? '9+' : followRequests.length}
+          </span>
+        )}
+        {unreadCount > 0 && (
+          <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-pink-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold shadow-lg border border-slate-900">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {isOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="fixed sm:absolute inset-x-2 sm:inset-x-auto sm:right-0 bottom-16 sm:bottom-auto sm:top-12 sm:w-[400px] md:w-[500px] lg:w-[600px] max-h-[60vh] sm:max-h-[80vh] md:max-h-[700px] bg-slate-900 border border-purple-500/30 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-purple-500/20">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xl font-semibold text-white">{t.notifications.title}</h3>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="text-slate-400 hover:text-white transition-colors"
+                  title={t.notifications.close}
+                  aria-label={t.notifications.close}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              
+              {/* Tabs */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setActiveTab('notifications')}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                    activeTab === 'notifications'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }`}
+                >
+                  <Bell size={14} className="inline mr-1" />
+                  {language === 'tr' ? 'Bildirimler' : 'Notifications'}
+                  {unreadCount > 0 && (
+                    <span className="ml-1 px-1.5 py-0.5 bg-pink-500 rounded-full text-xs">{unreadCount}</span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setActiveTab('requests')}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                    activeTab === 'requests'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }`}
+                >
+                  <UserPlus size={14} className="inline mr-1" />
+                  {language === 'tr' ? 'İstekler' : 'Requests'}
+                  {followRequests.length > 0 && (
+                    <span className="ml-1 px-1.5 py-0.5 bg-cyan-500 rounded-full text-xs">{followRequests.length}</span>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-y-auto flex-1 scrollbar-hide">
+              {/* Follow Requests Tab */}
+              {activeTab === 'requests' && (
+                <div className="p-2">
+                  {followRequests.length === 0 ? (
+                    <div className="text-center py-8 px-4">
+                      <UserPlus className="mx-auto mb-3 text-slate-600" size={32} />
+                      <p className="text-slate-400">{language === 'tr' ? 'Takip isteği yok' : 'No follow requests'}</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {followRequests.map((request) => (
+                        <div
+                          key={request.id}
+                          className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl hover:bg-slate-800 transition-colors"
+                        >
+                          <button
+                            onClick={() => {
+                              navigate(`/profile/${request.requester_id}`);
+                              setIsOpen(false);
+                            }}
+                            className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500/20 to-purple-500/20 border border-cyan-500/30 flex items-center justify-center overflow-hidden"
+                          >
+                            {request.requester_profile.avatar_url ? (
+                              <img src={request.requester_profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <User className="text-cyan-400" size={20} />
+                            )}
+                          </button>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white font-medium text-sm truncate">
+                              {request.requester_profile.full_name}
+                            </p>
+                            <p className="text-slate-500 text-xs">
+                              {language === 'tr' ? 'sizi takip etmek istiyor' : 'wants to follow you'}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleAcceptRequest(request.id, request.requester_id)}
+                              className="p-2 bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors"
+                              title={language === 'tr' ? 'Kabul Et' : 'Accept'}
+                            >
+                              <Check size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleRejectRequest(request.id)}
+                              className="p-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg transition-colors"
+                              title={language === 'tr' ? 'Reddet' : 'Reject'}
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Notifications Tab */}
+              {activeTab === 'notifications' && (
+                <div>
+                  <div className="flex justify-end gap-2 p-2 border-b border-purple-500/10">
+                    {notifications.length > 0 && (
+                      <button
+                        onClick={deleteAllNotifications}
+                        className="text-xs text-red-400 hover:text-red-300 transition-colors px-2 py-1 rounded hover:bg-red-500/10 flex items-center gap-1"
+                      >
+                        <Trash2 size={12} />
+                        {t.notifications.deleteAll || 'Delete all'}
+                      </button>
+                    )}
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={markAllAsRead}
+                        className="text-xs text-purple-400 hover:text-purple-300 transition-colors px-2 py-1 rounded hover:bg-purple-500/10"
+                      >
+                        {t.notifications.markAllRead}
+                      </button>
+                    )}
+                  </div>
+                  {loading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="animate-spin text-purple-400" size={24} />
+                </div>
+              ) : notifications.length === 0 ? (
+                <div className="text-center py-12">
+                  <Bell className="mx-auto mb-4 text-slate-600" size={48} />
+                  <p className="text-slate-400">{t.notifications.noNotifications}</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-purple-500/10">
+                  {notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      className={`relative group ${
+                        !notification.read_at ? 'bg-purple-500/5' : ''
+                      }`}
+                    >
+                      <button
+                        onClick={() => handleNotificationClick(notification)}
+                        className="w-full p-3 text-left hover:bg-slate-950/50 transition-colors"
+                      >
+                        <div className="flex flex-col gap-1.5 w-full">
+                          <div className="flex gap-2.5 items-start">
+                            <div className="relative flex-shrink-0 mt-0.5">
+                              {getNotificationIcon(notification.type)}
+                              {!notification.read_at && (
+                                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-pink-500 rounded-full border-2 border-slate-800" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0 pr-8">
+                              <p className="text-white text-xs leading-relaxed break-words break-all overflow-wrap-anywhere" style={{ wordBreak: 'break-word', overflowWrap: 'break-word', hyphens: 'auto' }}>
+                                {getNotificationText(notification)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 pl-6">
+                            <p className="text-slate-400 text-xs whitespace-nowrap">
+                              {formatDate(notification.created_at)}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={(e) => deleteNotification(notification.id, e)}
+                        className="absolute top-3 right-3 p-1 text-slate-600 hover:text-red-400 hover:bg-slate-700/50 rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                        title="Delete notification"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                  </div>
+                )}
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Submirra</string>
+    <string name="title_activity_main">Submirra</string>
+    <string name="package_name">ai.submirra.app</string>
+    <string name="custom_url_scheme">ai.submirra.app</string>
+</resources>
