@@ -70,7 +70,7 @@ interface Generation {
   is_liked: boolean;
 }
 
-type SortOption = 'recent' | 'popular' | 'trending';
+type SortOption = 'recent' | 'popular';
 type FilterOption = 'all' | 'following';
 type AnalysisTypeFilter = 'visual' | 'text' | 'generators';
 
@@ -518,19 +518,8 @@ export default function Social() {
         // Sort by popularity if needed
         if (sortBy === 'popular') {
           dreamsWithStats.sort((a, b) => {
-            const aScore = a.likes_count * 2 + a.comments_count;
-            const bScore = b.likes_count * 2 + b.comments_count;
-            return bScore - aScore;
-          });
-        } else if (sortBy === 'trending') {
-          // Trending: recent + engagement
-          dreamsWithStats.sort((a, b) => {
-            const aDate = new Date(a.created_at).getTime();
-            const bDate = new Date(b.created_at).getTime();
-            const aDaysDiff = (Date.now() - aDate) / (1000 * 60 * 60 * 24);
-            const bDaysDiff = (Date.now() - bDate) / (1000 * 60 * 60 * 24);
-            const aScore = (a.likes_count * 2 + a.comments_count) / (aDaysDiff + 1);
-            const bScore = (b.likes_count * 2 + b.comments_count) / (bDaysDiff + 1);
+            const aScore = a.likes_count + a.comments_count;
+            const bScore = b.likes_count + b.comments_count;
             return bScore - aScore;
           });
         }
@@ -1438,20 +1427,6 @@ export default function Social() {
               >
                 <Heart size={14} />
                 {t.social.popular}
-              </button>
-              <button
-                onClick={() => {
-                  setSortBy('trending');
-                  loadPublicDreams();
-                }}
-                className={`px-3 py-1 rounded text-sm font-medium transition-all flex items-center gap-1 ${
-                  sortBy === 'trending'
-                    ? 'bg-pink-600 text-white'
-                    : 'text-slate-400 hover:text-slate-300'
-                }`}
-              >
-                <TrendingUp size={14} />
-                {t.social.trending}
               </button>
             </div>
           </div>

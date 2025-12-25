@@ -1,4 +1,4 @@
-import { Mail, Send, CheckCircle, MessageCircle, User, FileText, MessageSquare } from 'lucide-react';
+import { Mail, Send, CheckCircle, MessageCircle, User, FileText, MessageSquare, Instagram } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useLanguage } from '../lib/i18n';
 import { useToast } from '../lib/ToastContext';
@@ -154,7 +154,7 @@ export default function Contact() {
         </div>
 
         {/* Contact Methods */}
-        <div className="grid md:grid-cols-2 gap-6 mb-12 animate-fade-in-delay">
+        <div className="grid md:grid-cols-3 gap-6 mb-12 animate-fade-in-delay">
           {/* Email Support */}
           <button
             onClick={() => setShowEmailModal(true)}
@@ -202,6 +202,28 @@ export default function Contact() {
               <Send size={16} className="group-hover:translate-x-1 transition-transform duration-300" />
             </div>
           </button>
+
+          {/* Instagram */}
+          <a
+            href="https://www.instagram.com/submirra.dream/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-900/80 backdrop-blur-xl border border-cyan-500/30 rounded-3xl p-8 shadow-2xl shadow-cyan-500/10 hover:shadow-cyan-500/20 transition-all duration-500 hover:border-cyan-500/50 hover:-translate-y-1 text-left block"
+          >
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-4 bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 rounded-2xl border border-cyan-500/30 flex-shrink-0 shadow-lg shadow-cyan-500/20 group-hover:scale-110 transition-transform duration-300">
+                <Instagram className="text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]" size={28} />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-white mb-1">Instagram</h3>
+                <p className="text-slate-400 text-sm">{language === 'tr' ? 'Bizi takip edin' : 'Follow us'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-cyan-400 group-hover:text-cyan-300 transition-colors duration-300 font-medium">
+              <span>@submirra.dream</span>
+              <Instagram size={16} className="group-hover:scale-110 transition-transform duration-300" />
+            </div>
+          </a>
         </div>
 
         {/* Contact Form */}
@@ -210,7 +232,7 @@ export default function Contact() {
             <div className="p-3 bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 rounded-xl border border-cyan-500/30 flex-shrink-0 shadow-lg shadow-cyan-500/20">
               <FileText className="text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]" size={24} />
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-white bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+            <h2 className="text-3xl md:text-4xl font-bold text-white bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent pb-1">
               {t.contact.sendMessage}
             </h2>
           </div>

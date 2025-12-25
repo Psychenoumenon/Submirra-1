@@ -693,8 +693,8 @@ export default function Settings() {
                         </p>
                         <p className="text-slate-300 text-sm">
                           {language === 'tr'
-                            ? 'Aboneliğinizi iptal ettiğinizde, premium özelliklerinize erişiminizi kaybedeceksiniz ve hesabınız ücretsiz plana dönüştürülecektir.'
-                            : 'When you cancel your subscription, you will lose access to premium features and your account will be downgraded to the free plan.'}
+                            ? 'Aboneliğinizi iptal ettiğinizde, özelliklerinize erişiminizi kaybedeceksiniz ve hesabınız ücretsiz plana dönüştürülecektir.'
+                            : 'When you cancel your subscription, you will lose access to your features and your account will be downgraded to the free plan.'}
                         </p>
                       </div>
                     </div>

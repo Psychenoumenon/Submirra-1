@@ -1722,7 +1722,7 @@ export default function Profile() {
           </p>
         </div>
 
-        <div className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-8 relative">
+        <div className="bg-slate-900/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-4 sm:p-8 relative overflow-hidden">
           {/* Profile Menu - Top Right Corner */}
           <div className="absolute top-4 right-4 z-10">
             <button
@@ -1840,8 +1840,8 @@ export default function Profile() {
           
           <div className="space-y-6">
             {/* Profile Picture Section */}
-            <div className={`flex items-center gap-6 pb-6 ${(isOwnProfile || !isProfilePrivate || isFollowing) ? 'border-b border-purple-500/20' : ''}`}>
-              <div className="relative group">
+            <div className={`flex flex-col sm:flex-row items-center sm:items-start gap-6 pb-6 ${(isOwnProfile || !isProfilePrivate || isFollowing) ? 'border-b border-purple-500/20' : ''}`}>
+              <div className="relative group flex-shrink-0">
                 {isOwnProfile ? (
                   <button
                     onClick={() => fileInputRef.current?.click()}
@@ -1888,15 +1888,15 @@ export default function Profile() {
                   />
                 )}
               </div>
-              <div className="flex-1 pr-10 sm:pr-0">
+              <div className="flex-1 w-full sm:pr-0">
                 <div className="flex items-center gap-2 sm:gap-3 mb-2 flex-wrap">
-                  <h2 className="text-2xl font-semibold text-white">
+                  <h2 className="text-2xl font-semibold text-white w-full sm:w-auto">
                     {isEditing ? (
                       <input
                         type="text"
                         value={editedName}
                         onChange={(e) => setEditedName(e.target.value)}
-                        className="bg-slate-950/50 border border-purple-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-500/60"
+                        className="w-full bg-slate-950/50 border border-purple-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-500/60"
                         autoFocus
                       />
                     ) : (

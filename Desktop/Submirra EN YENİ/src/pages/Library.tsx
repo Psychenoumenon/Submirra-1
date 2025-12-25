@@ -950,7 +950,7 @@ export default function Library() {
           onClick={() => setSelectedDream(null)}
         >
           <div
-            className="bg-slate-900 border border-purple-500/30 rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+            className="bg-slate-900 border border-purple-500/30 rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col mx-2 sm:mx-0"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -970,17 +970,17 @@ export default function Library() {
               </button>
             </div>
 
-            {/* Layout: Image Left (if has images), Content Right */}
-            <div className={`flex flex-1 overflow-hidden ${(() => {
+            {/* Layout: Image Top on Mobile, Left on Desktop */}
+            <div className={`flex flex-col sm:flex-row flex-1 overflow-hidden ${(() => {
               const images = getDreamImages(selectedDream);
               return images.length === 0 ? '' : '';
             })()}`}>
-              {/* Dream Image - Left Side (only for analyses with images) */}
+              {/* Dream Image - Top on Mobile, Left on Desktop */}
               {(() => {
                 const images = getDreamImages(selectedDream);
                 return images.length > 0;
               })() && (
-                <div className="w-1/2 flex-shrink-0 bg-slate-950 overflow-hidden relative">
+                <div className="w-full sm:w-1/2 h-64 sm:h-auto flex-shrink-0 bg-slate-950 overflow-hidden relative">
                   {(() => {
                     const images = getDreamImages(selectedDream);
                     if (images.length === 0) {
