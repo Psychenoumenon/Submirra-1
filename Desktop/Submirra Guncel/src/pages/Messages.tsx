@@ -8,6 +8,7 @@ import { useAuth } from '../lib/AuthContext';
 import { useRouter } from '../components/Router';
 import { useLanguage } from '../lib/i18n';
 import { useToast } from '../lib/ToastContext';
+import { useNotifications } from '../lib/NotificationsContext';
 import { supabase } from '../lib/supabase';
 import EmojiPicker from '../components/EmojiPicker';
 import VoiceRecorder from '../components/VoiceRecorder';
@@ -49,6 +50,7 @@ export default function Messages() {
   const { navigate, getUrlParam } = useRouter();
   const { language } = useLanguage();
   const { showToast } = useToast();
+  const { refreshMessages } = useNotifications();
   
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
@@ -77,6 +79,23 @@ export default function Messages() {
       navigate('/signin');
     }
   }, [user, authLoading, navigate]);
+
+  // Mobile: Disable body scroll when Messages page is open
+  useEffect(() => {
+    const isMobile = window.innerWidth < 640; // sm breakpoint
+    if (isMobile && user) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.height = '100%';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+    };
+  }, [user]);
 
   // Check for URL parameter to open specific conversation
   useEffect(() => {
@@ -497,6 +516,7 @@ export default function Messages() {
         .is('read_at', null);
 
       loadConversations();
+      refreshMessages(); // Bottom bar badge'i güncelle
     } catch (error) {
       console.error('Error marking as read:', error);
     }
@@ -514,12 +534,12 @@ export default function Messages() {
         .single();
 
       if (receiverProfile?.allow_messages_from === 'following') {
-        // Check if receiver is following the sender
+        // Check if sender (current user) is following the receiver
         const { data: followData } = await supabase
           .from('user_follows')
           .select('id')
-          .eq('follower_id', selectedChat)
-          .eq('following_id', user.id)
+          .eq('follower_id', user.id)
+          .eq('following_id', selectedChat)
           .single();
 
         if (!followData) {
@@ -870,9 +890,9 @@ export default function Messages() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-slate-950 pt-16 sm:pt-20 pb-20 sm:pb-8">
-      <div className="max-w-7xl mx-auto px-2 sm:px-4">
-        <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl sm:rounded-2xl overflow-hidden h-[calc(100vh-140px)] sm:h-[calc(100vh-140px)] flex">
+    <div className="min-h-screen bg-slate-950 pt-16 sm:pt-20 pb-32 sm:pb-8">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 h-full">
+        <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl sm:rounded-2xl overflow-hidden h-[calc(100vh-180px)] sm:h-[calc(100vh-140px)] flex">
           
           {/* Sidebar */}
           <div className={`${selectedChat ? 'hidden md:flex' : 'flex'} w-full md:w-96 flex-col border-r border-slate-800`}>

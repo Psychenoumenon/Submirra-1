@@ -1200,6 +1200,11 @@ export default function Settings() {
                 <ChevronRight className="text-slate-500 group-hover:text-cyan-400 transition-colors" size={20} />
               </button>
             </div>
+            
+            {/* Copyright - Mobile Only */}
+            <p className="text-center text-slate-500 text-xs mt-6">
+              © 2025 Submirra. All rights reserved.
+            </p>
           </div>
         </div>
       </div>

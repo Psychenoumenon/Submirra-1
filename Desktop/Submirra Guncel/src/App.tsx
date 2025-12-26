@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { LanguageProvider } from './lib/i18n';
 import { ToastProvider } from './lib/ToastContext';
+import { NotificationsProvider } from './lib/NotificationsContext';
 import { RouterProvider, useCurrentPage } from './components/Router';
 import Navigation from './components/Navigation';
 import Footer from './components/Footer';
@@ -145,11 +146,13 @@ function App() {
   return (
     <LanguageProvider>
       <AuthProvider>
-        <ToastProvider>
-          <RouterProvider>
-            <AppContent />
-          </RouterProvider>
-        </ToastProvider>
+        <NotificationsProvider>
+          <ToastProvider>
+            <RouterProvider>
+              <AppContent />
+            </RouterProvider>
+          </ToastProvider>
+        </NotificationsProvider>
       </AuthProvider>
     </LanguageProvider>
   );

@@ -5,6 +5,7 @@ import { useNavigate } from './Router';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../lib/ToastContext';
 import { useLanguage } from '../lib/i18n';
+import { useNotifications } from '../lib/NotificationsContext';
 
 interface NotificationsProps {
   variant?: 'default' | 'sidebar';
@@ -41,6 +42,7 @@ export default function Notifications({ variant = 'default' }: NotificationsProp
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { t, language } = useLanguage();
+  const { refreshNotifications: refreshGlobalNotifications } = useNotifications();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [followRequests, setFollowRequests] = useState<FollowRequest[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -313,6 +315,7 @@ export default function Notifications({ variant = 'default' }: NotificationsProp
         )
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
+      refreshGlobalNotifications(); // Hamburger menü badge'i güncelle
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -358,6 +361,7 @@ export default function Notifications({ variant = 'default' }: NotificationsProp
         prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() }))
       );
       setUnreadCount(0);
+      refreshGlobalNotifications(); // Hamburger menü badge'i güncelle
       showToast(t.notifications.markAllReadSuccess, 'success');
     } catch (error) {
       console.error('Error marking all as read:', error);

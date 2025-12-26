@@ -5,6 +5,7 @@ import Notifications from './Notifications';
 import { useNavigate, useCurrentPage } from './Router';
 import { useAuth } from '../lib/AuthContext';
 import { useLanguage } from '../lib/i18n';
+import { useNotifications } from '../lib/NotificationsContext';
 import { Menu, X, MessageSquare, User, Sparkles, Lock, LogOut, Settings, Home, Info, Users, BookOpen, Mail, Brain, Crown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -13,10 +14,10 @@ export default function Navigation() {
   const currentPage = useCurrentPage();
   const { user, signOut } = useAuth();
   const { t } = useLanguage();
+  const { unreadCount, unreadMessages } = useNotifications();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<{avatar_url: string | null, full_name: string} | null>(null);
   const [isPremium, setIsPremium] = useState(false);
-  const [unreadMessages, setUnreadMessages] = useState(0);
 
   // Desktop navbar items (full navigation)
   const navItems = [
@@ -89,50 +90,9 @@ export default function Navigation() {
       };
       
       checkPremium();
-      
-      // Load unread messages count
-      const loadUnreadMessages = async () => {
-        try {
-          const { count, error } = await supabase
-            .from('messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('receiver_id', user.id)
-            .is('read_at', null);
-          
-          if (!error && count !== null) {
-            setUnreadMessages(count);
-          }
-        } catch (error) {
-          console.error('Error loading unread messages:', error);
-        }
-      };
-      
-      loadUnreadMessages();
-      
-      // Subscribe to new messages
-      const messagesSubscription = supabase
-        .channel('unread-messages-nav')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'messages',
-            filter: `receiver_id=eq.${user.id}`
-          },
-          () => {
-            loadUnreadMessages();
-          }
-        )
-        .subscribe();
-      
-      return () => {
-        messagesSubscription.unsubscribe();
-      };
     } else {
       setUserProfile(null);
       setIsPremium(false);
-      setUnreadMessages(0);
     }
   }, [user]);
 
@@ -412,10 +372,15 @@ export default function Navigation() {
           <div className="flex sm:hidden items-center">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 text-slate-300 hover:text-pink-400 transition-all duration-200 hover:scale-110 hover:bg-slate-900/50 rounded-lg border border-transparent hover:border-pink-500/20"
+              className="p-2 text-slate-300 hover:text-pink-400 transition-all duration-200 hover:scale-110 hover:bg-slate-900/50 rounded-lg border border-transparent hover:border-pink-500/20 relative"
               aria-label="Toggle menu"
             >
               {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              {!isMobileMenuOpen && unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-pink-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold shadow-lg">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </button>
           </div>
         </div>

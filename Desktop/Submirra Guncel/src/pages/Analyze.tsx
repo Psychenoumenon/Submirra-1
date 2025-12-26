@@ -1030,7 +1030,14 @@ export default function Analyze() {
                       {t.analyze.processingTitle}
                     </h3>
                     <p className="text-sm md:text-base text-pink-300 leading-relaxed">
-                      {t.analyze.pendingMessage}
+                      {(lastAnalysisType === 'basic_visual' || lastAnalysisType === 'advanced_visual')
+                        ? (language === 'tr' 
+                            ? 'Rüyanız kısa süre içinde analiz edilip görselleştirilecektir. Lütfen bekleyiniz. Tamamlandıktan sonra size bildirim gelecektir, kütüphanenizden rüyanızın durumunu kontrol edebilirsiniz.'
+                            : 'Your dream will be analyzed and visualized shortly. Please wait. You will receive a notification when completed, you can check the status of your dream from your library.')
+                        : (language === 'tr'
+                            ? 'Rüyanız kısa süre içinde analiz edilecektir. Lütfen bekleyiniz. Tamamlandıktan sonra size bildirim gelecektir, kütüphanenizden rüyanızın durumunu kontrol edebilirsiniz.'
+                            : 'Your dream will be analyzed shortly. Please wait. You will receive a notification when completed, you can check the status of your dream from your library.')
+                      }
                     </p>
                   </div>
                 </div>
