@@ -2088,7 +2088,7 @@ export default function Social() {
                 </div>
 
                 {/* Comments Section */}
-                <div className="border-t border-purple-500/20 pt-6 px-6 pb-6">
+                <div className="border-t border-purple-500/20 pt-6 px-6 pb-24 sm:pb-6">
                   <h3 className="text-lg font-semibold text-white mb-4">{t.social.comments}</h3>
                   
                   {/* Comment Input */}
@@ -2283,7 +2283,7 @@ export default function Social() {
             </div>
 
             {/* Comment Input */}
-            <div className="p-6 border-t border-purple-500/20">
+            <div className="p-6 pb-24 sm:pb-6 border-t border-purple-500/20">
               {user ? (
                 <div className="flex gap-3 items-start">
                   <EmojiPicker 

@@ -29,7 +29,7 @@ export default function Footer() {
               {t.footer.feedback}
             </button>
           </div>
-          <div className="text-slate-500 text-xs">
+          <div className="hidden sm:block text-slate-500 text-xs">
             © {new Date().getFullYear()} Submirra. All rights reserved.
           </div>
         </div>

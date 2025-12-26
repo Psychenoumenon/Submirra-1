@@ -950,7 +950,7 @@ export default function Library() {
           onClick={() => setSelectedDream(null)}
         >
           <div
-            className="bg-slate-900 border border-purple-500/30 rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col mx-2 sm:mx-0"
+            className="bg-slate-900 border border-purple-500/30 rounded-2xl max-w-5xl w-full max-h-[75vh] sm:max-h-[85vh] overflow-hidden flex flex-col mx-2 sm:mx-0"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -1065,7 +1065,7 @@ export default function Library() {
 
               {/* Content Right Side (or Full Width for basic analysis) */}
               <div className={`flex flex-col overflow-y-auto ${(selectedDream.analysis_type === 'basic' || selectedDream.analysis_type === 'advanced') ? 'w-full' : 'flex-1'}`}>
-                <div className="p-6">
+                <div className="p-6 pb-24 sm:pb-6">
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold text-purple-400 mb-2">{t.library.yourDream}</h3>
                     <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">
@@ -1083,7 +1083,7 @@ export default function Library() {
                   )}
 
                   {/* Action buttons in modal */}
-                  <div className="pt-6 border-t border-purple-500/20 flex gap-2 flex-wrap">
+                  <div className="pt-6 pb-24 sm:pb-6 border-t border-purple-500/20 flex gap-2 flex-wrap">
                     {/* Primary Image Button - Only for premium users with multiple images */}
                     {(() => {
                       const images = getDreamImages(selectedDream);

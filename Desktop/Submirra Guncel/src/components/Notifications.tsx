@@ -42,10 +42,9 @@ export default function Notifications({ variant = 'default' }: NotificationsProp
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { t, language } = useLanguage();
-  const { refreshNotifications: refreshGlobalNotifications } = useNotifications();
+  const { refreshNotifications: refreshGlobalNotifications, unreadCount: globalUnreadCount } = useNotifications();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [followRequests, setFollowRequests] = useState<FollowRequest[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'notifications' | 'requests'>('notifications');
@@ -77,7 +76,6 @@ export default function Notifications({ variant = 'default' }: NotificationsProp
       }));
 
       setNotifications(formattedNotifications);
-      setUnreadCount(formattedNotifications.filter(n => !n.read_at).length);
       
       // Also load follow requests
       await loadFollowRequests();
@@ -204,8 +202,8 @@ export default function Notifications({ variant = 'default' }: NotificationsProp
         return [formattedNotification, ...prev];
       });
 
-      // Increment unread count instantly
-      setUnreadCount(prev => prev + 1);
+      // Refresh global unread count
+      refreshGlobalNotifications();
 
       // Show toast notification
       if (formattedNotification.type === 'dream_completed') {
@@ -314,8 +312,7 @@ export default function Notifications({ variant = 'default' }: NotificationsProp
           n.id === notificationId ? { ...n, read_at: new Date().toISOString() } : n
         )
       );
-      setUnreadCount(prev => Math.max(0, prev - 1));
-      refreshGlobalNotifications(); // Hamburger menü badge'i güncelle
+      refreshGlobalNotifications(); // Global badge'leri güncelle
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -333,12 +330,8 @@ export default function Notifications({ variant = 'default' }: NotificationsProp
 
       if (error) throw error;
 
-      const deletedNotif = notifications.find(n => n.id === notificationId);
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
-      
-      if (deletedNotif && !deletedNotif.read_at) {
-        setUnreadCount(prev => Math.max(0, prev - 1));
-      }
+      refreshGlobalNotifications();
     } catch (error) {
       console.error('Error deleting notification:', error);
       showToast(t.notifications.deleteError, 'error');
@@ -360,8 +353,7 @@ export default function Notifications({ variant = 'default' }: NotificationsProp
       setNotifications(prev =>
         prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() }))
       );
-      setUnreadCount(0);
-      refreshGlobalNotifications(); // Hamburger menü badge'i güncelle
+      refreshGlobalNotifications(); // Global badge'leri güncelle
       showToast(t.notifications.markAllReadSuccess, 'success');
     } catch (error) {
       console.error('Error marking all as read:', error);
@@ -385,7 +377,7 @@ export default function Notifications({ variant = 'default' }: NotificationsProp
       if (error) throw error;
 
       setNotifications([]);
-      setUnreadCount(0);
+      refreshGlobalNotifications();
       showToast(t.notifications.deleteAllSuccess || 'All notifications deleted', 'success');
     } catch (error) {
       console.error('Error deleting all notifications:', error);
@@ -488,9 +480,9 @@ export default function Notifications({ variant = 'default' }: NotificationsProp
         >
           <div className="relative">
             <Bell size={18} />
-            {(followRequests.length > 0 || unreadCount > 0) && (
+            {(followRequests.length > 0 || globalUnreadCount > 0) && (
               <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] bg-pink-500 rounded-full text-white text-[8px] flex items-center justify-center font-bold">
-                {(followRequests.length + unreadCount) > 9 ? '9+' : followRequests.length + unreadCount}
+                {(followRequests.length + globalUnreadCount) > 9 ? '9+' : followRequests.length + globalUnreadCount}
               </span>
             )}
           </div>
@@ -510,9 +502,9 @@ export default function Notifications({ variant = 'default' }: NotificationsProp
               {followRequests.length > 9 ? '9+' : followRequests.length}
             </span>
           )}
-          {unreadCount > 0 && (
+          {globalUnreadCount > 0 && (
             <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-pink-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold shadow-lg border border-slate-900">
-              {unreadCount > 9 ? '9+' : unreadCount}
+              {globalUnreadCount > 9 ? '9+' : globalUnreadCount}
             </span>
           )}
         </button>
@@ -554,8 +546,8 @@ export default function Notifications({ variant = 'default' }: NotificationsProp
                 >
                   <Bell size={14} className="inline mr-1" />
                   {language === 'tr' ? 'Bildirimler' : 'Notifications'}
-                  {unreadCount > 0 && (
-                    <span className="ml-1 px-1.5 py-0.5 bg-pink-500 rounded-full text-xs">{unreadCount}</span>
+                  {globalUnreadCount > 0 && (
+                    <span className="ml-1 px-1.5 py-0.5 bg-pink-500 rounded-full text-xs">{globalUnreadCount}</span>
                   )}
                 </button>
                 <button
@@ -648,7 +640,7 @@ export default function Notifications({ variant = 'default' }: NotificationsProp
                         {t.notifications.deleteAll || 'Delete all'}
                       </button>
                     )}
-                    {unreadCount > 0 && (
+                    {globalUnreadCount > 0 && (
                       <button
                         onClick={markAllAsRead}
                         className="text-xs text-purple-400 hover:text-purple-300 transition-colors px-2 py-1 rounded hover:bg-purple-500/10"

@@ -2285,7 +2285,7 @@ export default function Profile() {
                 <X size={20} />
               </button>
             </div>
-            <div className="overflow-y-auto flex-1 p-4">
+            <div className="overflow-y-auto flex-1 p-4 pb-24 sm:pb-4">
               {loadingFollows ? (
                 <div className="flex justify-center py-8">
                   <Loader2 className="animate-spin text-purple-400" size={32} />
@@ -2358,7 +2358,7 @@ export default function Profile() {
                 <X size={20} />
               </button>
             </div>
-            <div className="overflow-y-auto flex-1 p-4">
+            <div className="overflow-y-auto flex-1 p-4 pb-24 sm:pb-4">
               {loadingFollows ? (
                 <div className="flex justify-center py-8">
                   <Loader2 className="animate-spin text-purple-400" size={32} />

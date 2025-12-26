@@ -58,54 +58,18 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (user) {
+      // Initial fetch
       refreshNotifications();
       refreshMessages();
 
-      // Subscribe to notifications changes (realtime)
-      const notificationsSubscription = supabase
-        .channel(`notifications_badge_${user.id}`)
-        .on('postgres_changes', {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`
-        }, () => {
-          refreshNotifications();
-        })
-        .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`
-        }, () => {
-          refreshNotifications();
-        })
-        .subscribe();
-
-      // Subscribe to messages changes (realtime)
-      const messagesSubscription = supabase
-        .channel(`messages_badge_${user.id}`)
-        .on('postgres_changes', {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `receiver_id=eq.${user.id}`
-        }, () => {
-          refreshMessages();
-        })
-        .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'messages',
-          filter: `receiver_id=eq.${user.id}`
-        }, () => {
-          refreshMessages();
-        })
-        .subscribe();
+      // Polling: Check for new notifications every 1 second
+      const pollingInterval = setInterval(() => {
+        refreshNotifications();
+        refreshMessages();
+      }, 1000);
 
       return () => {
-        notificationsSubscription.unsubscribe();
-        messagesSubscription.unsubscribe();
+        clearInterval(pollingInterval);
       };
     }
   }, [user]);
