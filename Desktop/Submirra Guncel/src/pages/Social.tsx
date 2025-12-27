@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Heart, MessageCircle, User, Loader2, Send, TrendingUp, Clock, Filter, Search, Users, Share2, Trash2, Sparkles, X, ChevronLeft, ChevronRight, Zap, BookOpen, Lock, Wand2, Download } from 'lucide-react';
+import { Heart, MessageCircle, User, Loader2, Send, TrendingUp, Clock, Filter, Search, Users, Share2, Trash2, Sparkles, X, ChevronLeft, ChevronRight, Zap, BookOpen, Lock, Wand2, Download, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from '../components/Router';
 import { useLanguage } from '../lib/i18n';
@@ -47,6 +47,9 @@ interface Comment {
     full_name: string;
     avatar_url: string | null;
   };
+  likes_count: number;
+  dislikes_count: number;
+  user_like_status: 'like' | 'dislike' | null;
 }
 
 interface Generation {
@@ -109,6 +112,7 @@ export default function Social() {
   const touchEndX = useRef<number | null>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
   const generationCommentInputRef = useRef<HTMLTextAreaElement>(null);
+  const scrollPositionRef = useRef<number>(0);
   const [planType, setPlanType] = useState<'free' | 'trial' | 'standard' | 'premium' | 'ruyagezer' | null | undefined>(undefined);
   const [checkingPlan, setCheckingPlan] = useState(true);
 
@@ -211,24 +215,33 @@ export default function Social() {
   }, [user, sortBy, filterBy, actualSearchQuery, analysisTypeFilter]);
 
 
-  // Prevent body scroll when modal is open
+  // Prevent body scroll when any modal is open - use ref to store scroll position
   useEffect(() => {
-    if (selectedDream) {
-      // Save current scroll position
-      const scrollY = window.scrollY;
+    const isModalOpen = selectedDream || selectedGeneration;
+    
+    if (isModalOpen) {
+      // Save current scroll position to ref BEFORE changing body styles
+      scrollPositionRef.current = window.scrollY;
+      
+      // Lock body scroll
       document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
+      document.body.style.top = `-${scrollPositionRef.current}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
       document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
     } else {
-      // Restore scroll position
-      const scrollY = document.body.style.top;
+      // Restore body styles
       document.body.style.position = '';
       document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
       document.body.style.width = '';
       document.body.style.overflow = '';
-      if (scrollY) {
-        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      
+      // Restore scroll position from ref
+      if (scrollPositionRef.current > 0) {
+        window.scrollTo(0, scrollPositionRef.current);
       }
     }
 
@@ -236,10 +249,12 @@ export default function Social() {
       // Cleanup on unmount
       document.body.style.position = '';
       document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
       document.body.style.width = '';
       document.body.style.overflow = '';
     };
-  }, [selectedDream]);
+  }, [selectedDream, selectedGeneration]);
 
   // Handle URL parameters for opening specific dream modal
   useEffect(() => {
@@ -907,10 +922,28 @@ export default function Social() {
 
       if (error) throw error;
 
-      setComments((data || []).map(comment => ({
-        ...comment,
-        profiles: comment.profiles || { full_name: 'Anonymous', avatar_url: null }
-      })));
+      // Get user's likes for these comments
+      let userLikes: { comment_id: string; is_like: boolean }[] = [];
+      if (user && data && data.length > 0) {
+        const commentIds = data.map(c => c.id);
+        const { data: likesData } = await supabase
+          .from('comment_likes')
+          .select('comment_id, is_like')
+          .eq('user_id', user.id)
+          .in('comment_id', commentIds);
+        userLikes = likesData || [];
+      }
+
+      setComments((data || []).map(comment => {
+        const userLike = userLikes.find(l => l.comment_id === comment.id);
+        return {
+          ...comment,
+          profiles: comment.profiles || { full_name: 'Anonymous', avatar_url: null },
+          likes_count: comment.likes_count || 0,
+          dislikes_count: comment.dislikes_count || 0,
+          user_like_status: userLike ? (userLike.is_like ? 'like' : 'dislike') : null
+        };
+      }));
     } catch (error) {
       console.error('Error loading comments:', error);
       showToast(language === 'tr' ? 'Yorumlar yüklenemedi' : 'Failed to load comments', 'error');
@@ -993,6 +1026,83 @@ export default function Social() {
     } catch (error) {
       console.error('Error deleting comment:', error);
       showToast(t.social.commentDeleteFailed, 'error');
+    }
+  };
+
+  const handleCommentLike = async (commentId: string, isLike: boolean) => {
+    if (!user) {
+      navigate('/signin');
+      return;
+    }
+
+    const comment = comments.find(c => c.id === commentId);
+    if (!comment) return;
+
+    try {
+      const currentStatus = comment.user_like_status;
+      
+      if (currentStatus === (isLike ? 'like' : 'dislike')) {
+        // Remove the like/dislike
+        await supabase
+          .from('comment_likes')
+          .delete()
+          .eq('comment_id', commentId)
+          .eq('user_id', user.id);
+        
+        // Update local state
+        setComments(prev => prev.map(c => 
+          c.id === commentId 
+            ? { 
+                ...c, 
+                likes_count: isLike ? Math.max(0, c.likes_count - 1) : c.likes_count,
+                dislikes_count: !isLike ? Math.max(0, c.dislikes_count - 1) : c.dislikes_count,
+                user_like_status: null 
+              }
+            : c
+        ));
+      } else if (currentStatus === null) {
+        // Add new like/dislike
+        await supabase
+          .from('comment_likes')
+          .insert({
+            comment_id: commentId,
+            user_id: user.id,
+            is_like: isLike
+          });
+        
+        // Update local state
+        setComments(prev => prev.map(c => 
+          c.id === commentId 
+            ? { 
+                ...c, 
+                likes_count: isLike ? c.likes_count + 1 : c.likes_count,
+                dislikes_count: !isLike ? c.dislikes_count + 1 : c.dislikes_count,
+                user_like_status: isLike ? 'like' : 'dislike' 
+              }
+            : c
+        ));
+      } else {
+        // Change from like to dislike or vice versa
+        await supabase
+          .from('comment_likes')
+          .update({ is_like: isLike })
+          .eq('comment_id', commentId)
+          .eq('user_id', user.id);
+        
+        // Update local state
+        setComments(prev => prev.map(c => 
+          c.id === commentId 
+            ? { 
+                ...c, 
+                likes_count: isLike ? c.likes_count + 1 : Math.max(0, c.likes_count - 1),
+                dislikes_count: !isLike ? c.dislikes_count + 1 : Math.max(0, c.dislikes_count - 1),
+                user_like_status: isLike ? 'like' : 'dislike' 
+              }
+            : c
+        ));
+      }
+    } catch (error) {
+      console.error('Error handling comment like:', error);
     }
   };
 
@@ -2180,6 +2290,31 @@ export default function Social() {
                               )}
                             </div>
                             <p className="text-slate-300 text-sm">{comment.comment_text}</p>
+                            {/* Like/Dislike buttons */}
+                            <div className="flex items-center gap-3 mt-2">
+                              <button
+                                onClick={() => handleCommentLike(comment.id, true)}
+                                className={`flex items-center gap-1 text-xs transition-colors ${
+                                  comment.user_like_status === 'like' 
+                                    ? 'text-green-400' 
+                                    : 'text-slate-500 hover:text-green-400'
+                                }`}
+                              >
+                                <ThumbsUp size={14} className={comment.user_like_status === 'like' ? 'fill-current' : ''} />
+                                {comment.likes_count > 0 && <span>{comment.likes_count}</span>}
+                              </button>
+                              <button
+                                onClick={() => handleCommentLike(comment.id, false)}
+                                className={`flex items-center gap-1 text-xs transition-colors ${
+                                  comment.user_like_status === 'dislike' 
+                                    ? 'text-red-400' 
+                                    : 'text-slate-500 hover:text-red-400'
+                                }`}
+                              >
+                                <ThumbsDown size={14} className={comment.user_like_status === 'dislike' ? 'fill-current' : ''} />
+                                {comment.dislikes_count > 0 && <span>{comment.dislikes_count}</span>}
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}

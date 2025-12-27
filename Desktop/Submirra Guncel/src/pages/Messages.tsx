@@ -1158,7 +1158,7 @@ export default function Messages() {
                                     className="fixed inset-0 z-40" 
                                     onClick={() => setMessageMenuId(null)}
                                   />
-                                  <div className={`absolute ${isMine ? 'right-full mr-2' : 'left-full ml-2'} top-0 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 min-w-[140px]`}>
+                                  <div className={`absolute ${isMine ? 'right-0 sm:right-full sm:mr-2' : 'left-0 sm:left-full sm:ml-2'} top-full mt-1 sm:top-0 sm:mt-0 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 min-w-[160px]`}>
                                     {isMine && (
                                       <button
                                         onClick={() => {

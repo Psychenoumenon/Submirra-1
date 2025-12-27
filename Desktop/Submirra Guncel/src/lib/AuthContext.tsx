@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { getUserIP, checkIPExists, saveUserIP } from './ipControl';
+import { initializePushNotifications } from './pushNotifications';
 
 interface AuthContextType {
   user: User | null;
@@ -36,6 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         setUser(session.user);
         checkTrialExpiration(session.user.id);
+        // Initialize push notifications
+        initializePushNotifications(session.user.id).catch(console.error);
       } else {
         setUser(null);
       }
