@@ -164,13 +164,31 @@ export default function Profile() {
           // Viewing another user's profile
           // Clear all state immediately to prevent showing old user's data
           setProfile(null);
-          setStats({
-            public_dreams_count: 0,
-            total_likes_received: 0,
-            total_comments_received: 0,
-            followers_count: 0,
-            following_count: 0,
-          });
+          
+          // Try to load cached stats immediately for instant display
+          try {
+            const cachedStats = localStorage.getItem(`profile_stats_${userId}`);
+            if (cachedStats) {
+              setStats(JSON.parse(cachedStats));
+            } else {
+              setStats({
+                public_dreams_count: 0,
+                total_likes_received: 0,
+                total_comments_received: 0,
+                followers_count: 0,
+                following_count: 0,
+              });
+            }
+          } catch {
+            setStats({
+              public_dreams_count: 0,
+              total_likes_received: 0,
+              total_comments_received: 0,
+              followers_count: 0,
+              following_count: 0,
+            });
+          }
+          
           setPublicDreams([]);
           setIsFollowing(false);
           setIsBlocked(false);
@@ -226,6 +244,14 @@ export default function Profile() {
           }
           setProfileUserId(user.id);
           setIsOwnProfile(true);
+          
+          // Try to load cached stats immediately for instant display
+          try {
+            const cachedStats = localStorage.getItem(`profile_stats_${user.id}`);
+            if (cachedStats) {
+              setStats(JSON.parse(cachedStats));
+            }
+          } catch {}
           
           // Load all critical data in parallel
           await Promise.all([
@@ -378,13 +404,16 @@ export default function Profile() {
         .single();
 
       if (!statsError && statsData) {
-        setStats({
+        const newStats = {
           public_dreams_count: statsData.public_dreams_count || 0,
           total_likes_received: statsData.total_likes_received || 0,
           total_comments_received: statsData.total_comments_received || 0,
           followers_count: statsData.followers_count || 0,
           following_count: statsData.following_count || 0,
-        });
+        };
+        setStats(newStats);
+        // Cache stats for instant display next time
+        try { localStorage.setItem(`profile_stats_${userId}`, JSON.stringify(newStats)); } catch {}
       } else {
         // Manual calculation - get all public dreams first, then count likes and comments
         const { data: publicDreams } = await supabase
@@ -1060,13 +1089,16 @@ export default function Profile() {
         .single();
 
       if (!statsError && statsData) {
-        setStats({
+        const newStats = {
           public_dreams_count: statsData.public_dreams_count || 0,
           total_likes_received: statsData.total_likes_received || 0,
           total_comments_received: statsData.total_comments_received || 0,
           followers_count: statsData.followers_count || 0,
           following_count: statsData.following_count || 0,
-        });
+        };
+        setStats(newStats);
+        // Cache stats for instant display next time
+        try { localStorage.setItem(`profile_stats_${user.id}`, JSON.stringify(newStats)); } catch {}
       } else {
         // Manual calculation - get all public dreams first, then count likes and comments
         const { data: publicDreams } = await supabase
@@ -1981,7 +2013,7 @@ export default function Profile() {
                 </div>
                 <button
                   onClick={loadFollowers}
-                  className="text-center hover:bg-slate-950/30 rounded-lg p-2 transition-colors"
+                  className="text-center hover:bg-slate-950/30 rounded-lg transition-colors"
                 >
                   <div className="flex items-center justify-center gap-2 mb-1">
                     <Users className="text-purple-400" size={18} />
@@ -1991,7 +2023,7 @@ export default function Profile() {
                 </button>
                 <button
                   onClick={loadFollowing}
-                  className="text-center hover:bg-slate-950/30 rounded-lg p-2 transition-colors"
+                  className="text-center hover:bg-slate-950/30 rounded-lg transition-colors"
                 >
                   <div className="flex items-center justify-center gap-2 mb-1">
                     <User className="text-pink-400" size={18} />

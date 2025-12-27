@@ -130,106 +130,97 @@ export default function Messages() {
       loadMessages(selectedChat);
       markAsRead(selectedChat);
       
-      // Load user profile if not in conversations
-      const existingProfile = conversations.find(c => c.id === selectedChat);
-      if (existingProfile) {
-        setSelectedUserProfile(existingProfile);
-      } else {
-        // Fetch user profile
-        const fetchProfile = async () => {
-          try {
-            const { data, error } = await supabase
-              .from('profiles')
-              .select('id, full_name, username, avatar_url, is_online, show_online_status, last_seen')
-              .eq('id', selectedChat)
-              .single();
-            
-            if (!error && data) {
-              setSelectedUserProfile(data);
-            }
-          } catch (err) {
-            console.error('Error fetching user profile:', err);
+      // Fetch user profile directly
+      const fetchProfile = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('id, full_name, username, avatar_url, is_online, show_online_status, last_seen')
+            .eq('id', selectedChat)
+            .single();
+          
+          if (!error && data) {
+            setSelectedUserProfile(data);
           }
-        };
-        fetchProfile();
-      }
+        } catch (err) {
+          console.error('Error fetching user profile:', err);
+        }
+      };
+      fetchProfile();
     } else {
       setSelectedUserProfile(null);
     }
-  }, [selectedChat, user, conversations]);
+  }, [selectedChat, user]);
 
-  // Setup real-time subscription
+  // Setup real-time subscription - only for messages involving current user
   useEffect(() => {
     if (!user) return;
 
+    // Subscribe to messages where user is sender or receiver
     const channel = supabase
-      .channel('messages-realtime-v2')
+      .channel(`messages-${user.id}`)
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `sender_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newMsg = payload.new as Message;
+          // Add to messages if in current chat
+          if (selectedChat && newMsg.receiver_id === selectedChat) {
+            setMessages(prev => {
+              if (prev.find(m => m.id === newMsg.id)) return prev;
+              return [...prev, newMsg];
+            });
+            scrollToBottom();
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `receiver_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newMsg = payload.new as Message;
+          // Add to messages if in current chat
+          if (selectedChat && newMsg.sender_id === selectedChat) {
+            setMessages(prev => {
+              if (prev.find(m => m.id === newMsg.id)) return prev;
+              return [...prev, newMsg];
+            });
+            markAsRead(newMsg.sender_id);
+            scrollToBottom();
+          } else {
+            // New message from different conversation - update list
+            loadConversations();
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
           schema: 'public',
           table: 'messages',
         },
         (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const newMsg = payload.new as Message;
-            
-            // Check if message is part of current conversation
-            const isPartOfCurrentChat = selectedChat && (
-              (newMsg.sender_id === user.id && newMsg.receiver_id === selectedChat) ||
-              (newMsg.sender_id === selectedChat && newMsg.receiver_id === user.id)
-            );
-            
-            if (isPartOfCurrentChat) {
-              // Check if user is near bottom before adding message
-              const container = messagesContainerRef.current;
-              const isNearBottom = container ? 
-                (container.scrollHeight - container.scrollTop - container.clientHeight < 100) : true;
-              
-              setMessages(prev => {
-                // Check if message already exists
-                if (prev.find(m => m.id === newMsg.id)) return prev;
-                return [...prev, newMsg];
-              });
-              
-              // Mark as read if from the other person
-              if (newMsg.sender_id === selectedChat) {
-                markAsRead(newMsg.sender_id);
-              }
-              
-              // Only scroll if user was near bottom
-              if (isNearBottom) {
-                scrollToBottom();
-              }
-            }
-            
-            // Always update conversations list
-            loadConversations();
-          } else if (payload.eventType === 'UPDATE') {
-            // Update read status
-            const updatedMsg = payload.new as Message;
-            setMessages(prev =>
-              prev.map(msg =>
-                msg.id === updatedMsg.id ? updatedMsg : msg
-              )
-            );
-          }
+          const updatedMsg = payload.new as Message;
+          setMessages(prev =>
+            prev.map(msg => msg.id === updatedMsg.id ? updatedMsg : msg)
+          );
         }
       )
       .subscribe();
 
-    // Online status subscription
-    const presenceChannel = supabase
-      .channel('online-users')
-      .on('presence', { event: 'sync' }, () => {
-        updateConversationsOnlineStatus();
-      })
-      .subscribe();
-
     return () => {
       supabase.removeChannel(channel);
-      supabase.removeChannel(presenceChannel);
     };
   }, [user, selectedChat]);
 
@@ -515,7 +506,6 @@ export default function Messages() {
         .eq('receiver_id', user.id)
         .is('read_at', null);
 
-      loadConversations();
       refreshMessages(); // Bottom bar badge'i güncelle
     } catch (error) {
       console.error('Error marking as read:', error);
@@ -523,7 +513,13 @@ export default function Messages() {
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedChat || !user) return;
+    const messageText = newMessage.trim();
+    if (!messageText || !selectedChat || !user) return;
+
+    // Clear input immediately for better UX
+    const replyToId = replyingTo?.id || null;
+    setNewMessage('');
+    setReplyingTo(null);
 
     try {
       // Check if receiver allows messages from this user
@@ -531,16 +527,17 @@ export default function Messages() {
         .from('profiles')
         .select('allow_messages_from')
         .eq('id', selectedChat)
-        .single();
+        .maybeSingle();
 
       if (receiverProfile?.allow_messages_from === 'following') {
         // Check if sender (current user) is following the receiver
+        // "Only followers can message me" = sender must follow receiver
         const { data: followData } = await supabase
-          .from('user_follows')
+          .from('follows')
           .select('id')
-          .eq('follower_id', user.id)
-          .eq('following_id', selectedChat)
-          .single();
+          .eq('follower_id', user.id)        // sender follows
+          .eq('following_id', selectedChat)  // the receiver
+          .maybeSingle();
 
         if (!followData) {
           showToast(
@@ -549,8 +546,18 @@ export default function Messages() {
               : 'This user only accepts messages from followers',
             'error'
           );
+          setNewMessage(messageText);
           return;
         }
+      } else if (receiverProfile?.allow_messages_from === 'nobody') {
+        showToast(
+          language === 'tr' 
+            ? 'Bu kullanıcı mesaj almıyor' 
+            : 'This user does not accept messages',
+          'error'
+        );
+        setNewMessage(messageText);
+        return;
       }
 
       const { error } = await supabase
@@ -558,17 +565,23 @@ export default function Messages() {
         .insert({
           sender_id: user.id,
           receiver_id: selectedChat,
-          message_text: newMessage.trim(),
+          message_text: messageText,
           message_type: 'text',
-          reply_to: replyingTo?.id || null,
+          reply_to: replyToId,
         });
 
-      if (error) throw error;
-
-      setNewMessage('');
-      setReplyingTo(null);
+      if (error) {
+        console.error('Error sending message:', error);
+        showToast(language === 'tr' ? 'Mesaj gönderilemedi' : 'Failed to send message', 'error');
+        setNewMessage(messageText);
+      } else {
+        // Refresh conversations list so new chat appears immediately
+        loadConversations();
+      }
     } catch (error) {
       console.error('Error sending message:', error);
+      showToast(language === 'tr' ? 'Mesaj gönderilemedi' : 'Failed to send message', 'error');
+      setNewMessage(messageText);
     }
   };
 
