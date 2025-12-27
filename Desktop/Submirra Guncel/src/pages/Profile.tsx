@@ -60,7 +60,13 @@ export default function Profile() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [stats, setStats] = useState<UserStats | null>(null);
+  const [stats, setStats] = useState<UserStats>({
+    public_dreams_count: 0,
+    total_likes_received: 0,
+    total_comments_received: 0,
+    followers_count: 0,
+    following_count: 0,
+  });
   const [isFollowing, setIsFollowing] = useState(false);
   const [isOwnProfile, setIsOwnProfile] = useState(true);
   const [publicDreams, setPublicDreams] = useState<PublicDream[]>([]);
@@ -158,7 +164,13 @@ export default function Profile() {
           // Viewing another user's profile
           // Clear all state immediately to prevent showing old user's data
           setProfile(null);
-          setStats(null);
+          setStats({
+            public_dreams_count: 0,
+            total_likes_received: 0,
+            total_comments_received: 0,
+            followers_count: 0,
+            following_count: 0,
+          });
           setPublicDreams([]);
           setIsFollowing(false);
           setIsBlocked(false);
