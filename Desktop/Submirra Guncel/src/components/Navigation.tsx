@@ -372,10 +372,10 @@ export default function Navigation() {
           <div className="flex sm:hidden items-center">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 text-slate-300 hover:text-pink-400 transition-all duration-200 hover:scale-110 hover:bg-slate-900/50 rounded-lg border border-transparent hover:border-pink-500/20 relative"
+              className="p-2 text-white hover:text-pink-400 transition-all duration-200 hover:scale-110 hover:bg-slate-900/50 rounded-lg border border-transparent hover:border-pink-500/20 relative z-[60]"
               aria-label="Toggle menu"
             >
-              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              {isMobileMenuOpen ? <X size={24} className="text-pink-400" /> : <Menu size={24} />}
               {!isMobileMenuOpen && unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-pink-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold shadow-lg">
                   {unreadCount > 9 ? '9+' : unreadCount}
@@ -523,8 +523,8 @@ export default function Navigation() {
 
     {/* Mobil Bottom Navigation Bar - NAV DIŞINDA, Sabit Alt Kısım */}
     {user && (
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-[60] bg-slate-950/95 backdrop-blur-xl border-t border-pink-500/20 shadow-lg shadow-pink-500/10" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="grid grid-cols-5 gap-0 px-1 py-2 relative">
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-[60] bg-slate-950/95 backdrop-blur-xl border-t border-pink-500/20 shadow-lg shadow-pink-500/10" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <div className="grid grid-cols-5 gap-0 px-1 py-2 relative" style={{ minHeight: '56px' }}>
           {/* Social */}
           <button
             onClick={() => navigate('/social')}
