@@ -506,6 +506,11 @@ export default function Messages() {
         .eq('receiver_id', user.id)
         .is('read_at', null);
 
+      // Conversation listesindeki unread_count'u sıfırla (eş zamanlı güncelleme)
+      setConversations(prev => prev.map(conv => 
+        conv.id === partnerId ? { ...conv, unread_count: 0 } : conv
+      ));
+
       refreshMessages(); // Bottom bar badge'i güncelle
     } catch (error) {
       console.error('Error marking as read:', error);
