@@ -903,7 +903,7 @@ export default function Messages() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-slate-950 pt-16 sm:pt-20 pb-32 sm:pb-8">
+    <div className="min-h-screen bg-slate-950 pt-20 sm:pt-20 pb-32 sm:pb-8">
       <div className="max-w-7xl mx-auto px-2 sm:px-4 h-full">
         <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl sm:rounded-2xl overflow-hidden h-[calc(100vh-180px)] sm:h-[calc(100vh-140px)] flex">
           

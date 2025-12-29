@@ -67,6 +67,7 @@ export default function Profile() {
     followers_count: 0,
     following_count: 0,
   });
+  const [statsLoading, setStatsLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isOwnProfile, setIsOwnProfile] = useState(true);
   const [publicDreams, setPublicDreams] = useState<PublicDream[]>([]);
@@ -165,29 +166,15 @@ export default function Profile() {
           // Clear all state immediately to prevent showing old user's data
           setProfile(null);
           
-          // Try to load cached stats immediately for instant display
-          try {
-            const cachedStats = localStorage.getItem(`profile_stats_${userId}`);
-            if (cachedStats) {
-              setStats(JSON.parse(cachedStats));
-            } else {
-              setStats({
-                public_dreams_count: 0,
-                total_likes_received: 0,
-                total_comments_received: 0,
-                followers_count: 0,
-                following_count: 0,
-              });
-            }
-          } catch {
-            setStats({
-              public_dreams_count: 0,
-              total_likes_received: 0,
-              total_comments_received: 0,
-              followers_count: 0,
-              following_count: 0,
-            });
-          }
+          // Reset stats loading state for fresh data
+          setStatsLoading(true);
+          setStats({
+            public_dreams_count: 0,
+            total_likes_received: 0,
+            total_comments_received: 0,
+            followers_count: 0,
+            following_count: 0,
+          });
           
           setPublicDreams([]);
           setIsFollowing(false);
@@ -245,13 +232,8 @@ export default function Profile() {
           setProfileUserId(user.id);
           setIsOwnProfile(true);
           
-          // Try to load cached stats immediately for instant display
-          try {
-            const cachedStats = localStorage.getItem(`profile_stats_${user.id}`);
-            if (cachedStats) {
-              setStats(JSON.parse(cachedStats));
-            }
-          } catch {}
+          // Reset stats loading state for fresh data
+          setStatsLoading(true);
           
           // Load all critical data in parallel
           await Promise.all([
@@ -412,6 +394,7 @@ export default function Profile() {
           following_count: statsData.following_count || 0,
         };
         setStats(newStats);
+        setStatsLoading(false);
         // Cache stats for instant display next time
         try { localStorage.setItem(`profile_stats_${userId}`, JSON.stringify(newStats)); } catch {}
       } else {
@@ -486,9 +469,11 @@ export default function Profile() {
           followers_count: followersRes.count || 0,
           following_count: followingRes.count || 0,
         });
+        setStatsLoading(false);
       }
     } catch (error) {
       console.error('Error loading stats:', error);
+      setStatsLoading(false);
     }
   };
 
@@ -1097,6 +1082,7 @@ export default function Profile() {
           following_count: statsData.following_count || 0,
         };
         setStats(newStats);
+        setStatsLoading(false);
         // Cache stats for instant display next time
         try { localStorage.setItem(`profile_stats_${user.id}`, JSON.stringify(newStats)); } catch {}
       } else {
@@ -1179,9 +1165,11 @@ export default function Profile() {
           followers_count: followersRes.count || 0,
           following_count: followingRes.count || 0,
         });
+        setStatsLoading(false);
       }
     } catch (error) {
       console.error('Error loading stats:', error);
+      setStatsLoading(false);
     }
   };
 
@@ -1994,21 +1982,21 @@ export default function Profile() {
                   <div className="flex items-center justify-center gap-2 mb-1">
                     <BookOpen className="text-purple-400" size={18} />
                   </div>
-                  <p className="text-2xl font-bold text-white">{stats.public_dreams_count}</p>
+                  <p className="text-2xl font-bold text-white">{statsLoading ? '-' : stats.public_dreams_count}</p>
                   <p className="text-slate-400 text-xs">{t.profile.publicDreams}</p>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-2 mb-1">
                     <Heart className="text-pink-400" size={18} />
                   </div>
-                  <p className="text-2xl font-bold text-white">{stats.total_likes_received}</p>
+                  <p className="text-2xl font-bold text-white">{statsLoading ? '-' : stats.total_likes_received}</p>
                   <p className="text-slate-400 text-xs">{t.profile.likesReceived}</p>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-2 mb-1">
                     <MessageCircle className="text-cyan-400" size={18} />
                   </div>
-                  <p className="text-2xl font-bold text-white">{stats.total_comments_received}</p>
+                  <p className="text-2xl font-bold text-white">{statsLoading ? '-' : stats.total_comments_received}</p>
                   <p className="text-slate-400 text-xs">{t.profile.comments}</p>
                 </div>
                 <button
@@ -2018,7 +2006,7 @@ export default function Profile() {
                   <div className="flex items-center justify-center gap-2 mb-1">
                     <Users className="text-purple-400" size={18} />
                   </div>
-                  <p className="text-2xl font-bold text-white">{stats.followers_count}</p>
+                  <p className="text-2xl font-bold text-white">{statsLoading ? '-' : stats.followers_count}</p>
                   <p className="text-slate-400 text-xs">{t.profile.followers}</p>
                 </button>
                 <button
@@ -2028,7 +2016,7 @@ export default function Profile() {
                   <div className="flex items-center justify-center gap-2 mb-1">
                     <User className="text-pink-400" size={18} />
                   </div>
-                  <p className="text-2xl font-bold text-white">{stats.following_count}</p>
+                  <p className="text-2xl font-bold text-white">{statsLoading ? '-' : stats.following_count}</p>
                   <p className="text-slate-400 text-xs">{t.profile.following}</p>
                 </button>
               </div>

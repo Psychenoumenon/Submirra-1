@@ -36,6 +36,7 @@ export default function Analyze() {
   })();
   const [remainingAnalyses, setRemainingAnalyses] = useState<{ used: number; limit: number } | null>(null);
   const [planType, setPlanType] = useState<'free' | 'trial' | 'standard' | 'premium' | null>(null);
+  const [planLoading, setPlanLoading] = useState(true);
   const [visualAnalysesUsed, setVisualAnalysesUsed] = useState<{ used: number; limit: number } | null>(null);
   const [trialExpired, setTrialExpired] = useState(false);
   const [isDeveloper, setIsDeveloper] = useState(false);
@@ -63,6 +64,10 @@ export default function Analyze() {
       // Check if user is developer (developers have unlimited analysis)
       const isDev = isDeveloperSync(user.id);
       setIsDeveloper(isDev);
+      
+      if (isDev) {
+        setPlanLoading(false);
+      }
       
       if (isDev) {
         // Developers have unlimited analysis - show infinity symbol
@@ -96,6 +101,7 @@ export default function Analyze() {
       if (!subError && subscription) {
         const userPlanType = subscription.plan_type as 'free' | 'trial' | 'standard' | 'premium' | null;
         setPlanType(userPlanType);
+        setPlanLoading(false);
         
         // Check if trial has expired
         if (userPlanType === 'free' || userPlanType === 'trial') {
@@ -163,6 +169,7 @@ export default function Analyze() {
     } catch (error) {
       console.error('Error loading remaining analyses:', error);
       setRemainingAnalyses({ used: 0, limit: 5 });
+      setPlanLoading(false);
     }
   };
 
@@ -493,7 +500,7 @@ export default function Analyze() {
       setLastAnalysisType(analysisType);
 
       setDreamText('');
-      showToast('Dream saved successfully! Analysis will be ready soon.', 'success');
+      showToast(t.analyze.savedMessage, 'success');
       
       // Reload remaining analyses after successful submission
       await loadRemainingAnalyses();
@@ -631,8 +638,8 @@ export default function Analyze() {
         {!analysis ? (
           <form onSubmit={handleSubmit} className="max-w-4xl mx-auto animate-fade-in-delay">
             <div className="bg-slate-900/50 backdrop-blur-sm border border-pink-500/20 rounded-2xl p-5 md:p-8 relative hover:border-pink-500/30 transition-all duration-300 shadow-xl shadow-pink-500/5">
-              {/* Show free trial button only if user hasn't used trial AND not on standard/premium plans, and NOT developer */}
-              {!isDeveloper && !trialUsed && planType !== 'standard' && planType !== 'premium' && (
+              {/* Show free trial button only if user hasn't used trial AND not on standard/premium plans, and NOT developer, and plan is loaded */}
+              {!planLoading && !isDeveloper && !trialUsed && planType !== 'standard' && planType !== 'premium' && planType !== 'trial' && (
                 <div className="absolute -top-3 right-4 md:right-6 flex gap-2 items-center">
                   <button
                     onClick={() => navigate('/pricing')}
@@ -671,16 +678,16 @@ export default function Analyze() {
                         setTextAnalysisType('basic');
                       }
                     }}
-                    disabled={!isDeveloper && planType === null}
+                    disabled={!isDeveloper && !planLoading && planType === null}
                     className={`p-4 rounded-xl border-2 transition-all duration-300 text-left relative ${
-                      !isDeveloper && planType === null
+                      !isDeveloper && !planLoading && planType === null
                         ? 'border-slate-600/30 bg-slate-950/20 opacity-50 cursor-not-allowed'
                         : textAnalysisType === 'basic'
                         ? 'border-pink-500 bg-pink-500/10'
                         : 'border-purple-500/30 bg-slate-950/30 hover:border-purple-500/50'
                     }`}
                   >
-                    {!isDeveloper && planType === null && (
+                    {!isDeveloper && !planLoading && planType === null && (
                       <div className="absolute top-2 right-2">
                         <span className="px-2 py-0.5 bg-slate-700 text-slate-300 text-[10px] font-semibold rounded">🔒</span>
                       </div>
@@ -731,9 +738,9 @@ export default function Analyze() {
                         setTextAnalysisType('advanced');
                       }
                     }}
-                    disabled={!isDeveloper && (planType === null || planType === 'free' || (planType === 'trial' && trialExpired))}
+                    disabled={!isDeveloper && !planLoading && (planType === null || planType === 'free' || (planType === 'trial' && trialExpired))}
                     className={`p-4 rounded-xl border-2 transition-all duration-300 text-left relative ${
-                      !isDeveloper && (planType === null || planType === 'free' || (planType === 'trial' && trialExpired))
+                      !isDeveloper && !planLoading && (planType === null || planType === 'free' || (planType === 'trial' && trialExpired))
                         ? 'border-slate-600/30 bg-slate-950/20 opacity-50 cursor-not-allowed'
                         : textAnalysisType === 'advanced'
                         ? 'border-pink-500 bg-pink-500/10'
@@ -749,7 +756,7 @@ export default function Analyze() {
                       <span className={`font-semibold ${textAnalysisType === 'advanced' ? 'text-pink-400' : 'text-slate-300'}`}>
                         {t.analyze.analysisTypeAdvanced}
                       </span>
-                      {!isDeveloper && (planType === null || planType === 'free' || (planType === 'trial' && trialExpired)) && (
+                      {!isDeveloper && !planLoading && (planType === null || planType === 'free' || (planType === 'trial' && trialExpired)) && (
                         <span className="ml-auto px-2 py-0.5 bg-slate-700 text-slate-300 text-[10px] font-semibold rounded flex-shrink-0">🔒</span>
                       )}
                     </div>
@@ -794,7 +801,7 @@ export default function Analyze() {
                       // Toggle visual selection (can be combined with basic or advanced)
                       setIsVisualSelected(!isVisualSelected);
                     }}
-                    disabled={!isDeveloper && (
+                    disabled={!isDeveloper && !planLoading && (
                       planType === null || 
                       planType === 'free' || 
                       (planType === 'trial' && trialExpired) ||
@@ -803,7 +810,7 @@ export default function Analyze() {
                       (planType === 'premium' && visualAnalysesUsed && visualAnalysesUsed.used >= visualAnalysesUsed.limit)
                     )}
                     className={`p-4 rounded-xl border-2 transition-all duration-300 text-left relative ${
-                      !isDeveloper && (
+                      !isDeveloper && !planLoading && (
                         planType === null || 
                         planType === 'free' || 
                         (planType === 'trial' && trialExpired) ||
@@ -833,7 +840,7 @@ export default function Analyze() {
                         {visualAnalysesUsed.used}/{visualAnalysesUsed.limit}
                       </div>
                     )}
-                    {!isDeveloper && (
+                    {!isDeveloper && !planLoading && (
                       planType === null || 
                       planType === 'free' || 
                       (planType === 'trial' && trialExpired) ||

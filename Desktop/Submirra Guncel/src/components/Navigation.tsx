@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Logo from './Logo';
 import LanguageSwitcher from './LanguageSwitcher';
 import Notifications from './Notifications';
@@ -8,16 +8,23 @@ import { useLanguage } from '../lib/i18n';
 import { useNotifications } from '../lib/NotificationsContext';
 import { Menu, X, MessageSquare, User, Sparkles, Lock, LogOut, Settings, Home, Info, Users, BookOpen, Mail, Brain, Crown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { Capacitor } from '@capacitor/core';
 
 export default function Navigation() {
   const navigate = useNavigate();
   const currentPage = useCurrentPage();
   const { user, signOut } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isNativeApp = Capacitor.isNativePlatform();
   const { unreadCount, unreadMessages } = useNotifications();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<{avatar_url: string | null, full_name: string} | null>(null);
   const [isPremium, setIsPremium] = useState(false);
+  
+  // Swipe gesture state
+  const touchStartX = useRef<number>(0);
+  const touchEndX = useRef<number>(0);
+  const swipeThreshold = 50; // Minimum swipe distance in pixels
 
   // Desktop navbar items (full navigation)
   const navItems = [
@@ -111,11 +118,73 @@ export default function Navigation() {
     };
   }, [isMobileMenuOpen]);
 
+  // Swipe gesture handlers
+  const handleTouchStart = useCallback((e: TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchEndX.current = e.touches[0].clientX;
+  }, []);
+
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    const swipeDistance = touchEndX.current - touchStartX.current;
+    const startedFromEdge = touchStartX.current < 30; // Started from left edge
+    
+    // Swipe right to open (only if started from left edge)
+    if (!isMobileMenuOpen && swipeDistance > swipeThreshold && startedFromEdge) {
+      setIsMobileMenuOpen(true);
+    }
+    // Swipe left to close
+    else if (isMobileMenuOpen && swipeDistance < -swipeThreshold) {
+      setIsMobileMenuOpen(false);
+    }
+  }, [isMobileMenuOpen]);
+
+  // Add global touch event listeners for swipe gestures
+  useEffect(() => {
+    // Only add listeners on mobile (window width < 640px)
+    const isMobile = window.innerWidth < 640;
+    if (!isMobile) return;
+
+    document.addEventListener('touchstart', handleTouchStart, { passive: true });
+    document.addEventListener('touchmove', handleTouchMove, { passive: true });
+    document.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
+
   return (
     <>
     <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-950/90 backdrop-blur-xl border-b border-pink-500/20 shadow-lg shadow-pink-500/5" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       <div className="max-w-7xl mx-auto px-4 py-2" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center justify-between gap-6">
+          {/* Mobile Hamburger Menu - Sol tarafta sabit */}
+          <div className="flex sm:hidden items-center flex-shrink-0">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-3 text-white hover:text-pink-400 transition-all duration-200 hover:scale-110 hover:bg-slate-900/50 rounded-lg border border-transparent hover:border-pink-500/20 relative z-[100] touch-manipulation"
+              aria-label="Toggle menu"
+              style={{ minWidth: '48px', minHeight: '48px' }}
+            >
+              {isMobileMenuOpen ? (
+                <X size={28} className="text-pink-400" />
+              ) : (
+                <Menu size={28} className="text-white" />
+              )}
+              {!isMobileMenuOpen && unreadCount > 0 && (
+                <span className="absolute top-1 right-1 min-w-[20px] h-[20px] bg-pink-500 rounded-full text-white text-[11px] flex items-center justify-center font-bold shadow-lg">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+          </div>
+
           {/* Logo - Sadece Desktop (sm+) */}
           <div className="hidden sm:flex items-center flex-shrink-0">
             <Logo />
@@ -368,20 +437,17 @@ export default function Navigation() {
             )}
           </div>
 
-          {/* Mobil Top Navbar - Sadece Hamburger Menu (sol üst) */}
-          <div className="flex sm:hidden items-center">
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 text-white hover:text-pink-400 transition-all duration-200 hover:scale-110 hover:bg-slate-900/50 rounded-lg border border-transparent hover:border-pink-500/20 relative z-[60]"
-              aria-label="Toggle menu"
+          {/* Mobil sağ taraf - Submirra yazısı */}
+          <div className="flex sm:hidden flex-1 justify-end items-center pr-2">
+            <span 
+              className="text-lg font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent animate-gradient-slow"
+              style={{ 
+                backgroundSize: '200% auto',
+                animation: 'gradient-shift 4s ease-in-out infinite'
+              }}
             >
-              {isMobileMenuOpen ? <X size={24} className="text-pink-400" /> : <Menu size={24} />}
-              {!isMobileMenuOpen && unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-pink-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold shadow-lg">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </button>
+              Submirra
+            </span>
           </div>
         </div>
 
@@ -513,6 +579,22 @@ export default function Navigation() {
               <div className="pt-2 mt-2">
                 <LanguageSwitcher />
               </div>
+              
+              {/* Play Store Button - Only show on web, hidden in native app */}
+              {!isNativeApp && (
+                <div className="pt-3 mt-1">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 border border-slate-600/30 rounded-lg opacity-60 cursor-not-allowed">
+                    <svg className="w-5 h-5 text-slate-400" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.198l2.807 1.626a1 1 0 0 1 0 1.73l-2.808 1.626L15.206 12l2.492-2.491zM5.864 2.658L16.802 8.99l-2.303 2.303-8.635-8.635z"/>
+                    </svg>
+                    <span className="text-slate-400 text-sm font-medium">Google Play</span>
+                    <div className="flex items-center gap-1 ml-auto px-2 py-0.5 bg-slate-700/80 rounded text-xs text-slate-300">
+                      <Lock size={12} />
+                      <span>{language === 'tr' ? 'Yakında' : 'Soon'}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           </>
@@ -548,22 +630,49 @@ export default function Navigation() {
             )}
           </button>
 
-          {/* Analyze - Center Floating Button */}
+          {/* Analyze - Center Floating Button with Enhanced Effects */}
           <div className="flex justify-center">
             <button
               onClick={() => navigate('/analyze')}
-              className={`absolute -top-6 left-1/2 -translate-x-1/2 w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg ${
+              className={`absolute -top-6 left-1/2 -translate-x-1/2 w-14 h-14 rounded-full flex items-center justify-center transition-all duration-500 shadow-lg ${
                 currentPage === '/analyze'
                   ? 'bg-gradient-to-br from-pink-500 via-purple-500 to-cyan-500 shadow-purple-500/50 scale-110'
                   : 'bg-gradient-to-br from-pink-600 via-purple-600 to-cyan-600 hover:from-pink-500 hover:via-purple-500 hover:to-cyan-500 shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105'
               }`}
               title={t.nav.analyze}
               style={{
-                animation: currentPage !== '/analyze' ? 'pulse-glow 2s ease-in-out infinite' : 'none'
+                animation: currentPage !== '/analyze' ? 'float-gentle 3s ease-in-out infinite' : 'none'
               }}
             >
-              <div className={`absolute inset-0 rounded-full bg-gradient-to-br from-pink-400 via-purple-400 to-cyan-400 opacity-0 ${currentPage !== '/analyze' ? 'animate-ping' : ''}`} style={{ animationDuration: '2s' }} />
-              <Brain size={26} className="text-white relative z-10" />
+              {/* Outer glow ring - slow pulse */}
+              <div 
+                className="absolute -inset-1 rounded-full bg-gradient-to-br from-pink-500/30 via-purple-500/30 to-cyan-500/30 blur-sm"
+                style={{ animation: 'pulse-slow 4s ease-in-out infinite' }}
+              />
+              
+              {/* Inner rotating gradient ring */}
+              <div 
+                className="absolute inset-0 rounded-full bg-gradient-conic from-pink-500 via-purple-500 via-cyan-500 to-pink-500 opacity-20"
+                style={{ animation: 'spin-slow 8s linear infinite' }}
+              />
+              
+              {/* Shimmer effect */}
+              <div 
+                className="absolute inset-0 rounded-full overflow-hidden"
+                style={{ animation: 'shimmer 3s ease-in-out infinite' }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full" style={{ animation: 'shimmer-move 3s ease-in-out infinite' }} />
+              </div>
+              
+              {/* Brain icon with subtle glow */}
+              <Brain 
+                size={26} 
+                className="text-white relative z-10" 
+                style={{ 
+                  filter: 'drop-shadow(0 0 6px rgba(236, 72, 153, 0.5))',
+                  animation: 'breathe 4s ease-in-out infinite'
+                }} 
+              />
             </button>
           </div>
 
