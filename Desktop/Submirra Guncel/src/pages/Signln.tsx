@@ -228,7 +228,7 @@ export default function SignIn() {
               <>
                 <div>
                   <label className="block text-slate-300 font-medium mb-2 text-sm md:text-base">
-                    {t.auth.fullName}
+                    Adınız
                   </label>
                   <input
                     ref={fullNameRef}
@@ -236,13 +236,13 @@ export default function SignIn() {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     className="w-full px-3 md:px-4 py-2.5 md:py-3 bg-slate-950/50 border border-purple-500/30 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/20 transition-all text-sm md:text-base"
-                    placeholder={t.auth.enterFullName}
+                    placeholder="Adınız (anonim kalabilirsiniz)"
                     required={isSignUp}
                   />
                 </div>
                 <div>
                   <label className="block text-slate-300 font-medium mb-2 text-sm md:text-base">
-                    Username
+                    Kullanıcı Adı
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2 text-slate-400 text-sm md:text-base">@</span>
@@ -251,18 +251,18 @@ export default function SignIn() {
                       type="text"
                       value={username}
                       onChange={(e) => {
-                        // Remove @ if user types it, only allow alphanumeric and underscore (case-insensitive)
-                        const cleaned = e.target.value.replace(/[^a-zA-Z0-9_]/g, '');
+                        // Remove @ if user types it, allow alphanumeric, underscore, and Turkish characters
+                        const cleaned = e.target.value.replace(/[^a-zA-Z0-9_çşğüöıİĞÜÖŞÇ]/g, '');
                         setUsername(cleaned);
                       }}
                       className="w-full pl-8 md:pl-10 pr-3 md:pr-4 py-2.5 md:py-3 bg-slate-950/50 border border-purple-500/30 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/20 transition-all text-sm md:text-base"
-                      placeholder="username"
+                      placeholder="kullanıcı adı"
                       required={isSignUp}
                       minLength={3}
                       maxLength={20}
                     />
                   </div>
-                  <p className="text-xs text-slate-500 mt-1">Letters, numbers, and underscores only</p>
+                  <p className="text-xs text-slate-500 mt-1"></p>
                 </div>
               </>
             )}

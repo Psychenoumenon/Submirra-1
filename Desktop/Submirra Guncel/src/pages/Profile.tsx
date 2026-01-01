@@ -1190,8 +1190,8 @@ export default function Profile() {
         showToast('Username must be at least 3 characters', 'error');
         return;
       }
-      if (!/^[a-zA-Z0-9_]+$/.test(editedUsername)) {
-        showToast('Username can only contain letters, numbers, and underscores', 'error');
+      if (!/^[a-zA-Z0-9_çşğüöıİĞÜÖŞÇ]+$/.test(editedUsername)) {
+        showToast('Username sadece Latin ve Türkçe karakterler, rakamlar ve alt çizgi içerebilir', 'error');
         return;
       }
     }
